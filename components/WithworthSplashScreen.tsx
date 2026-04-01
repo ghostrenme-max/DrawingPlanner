@@ -19,50 +19,40 @@ const PURPLE = '#7C3AED';
 const ORANGE = '#F97316';
 
 const LOGO_PATH =
-  'M 105 310 C 105 310,118 340,148 330 C 178 320,188 240,218 245 C 248 250,252 310,282 295 C 312 280,340 190,400 148';
+  'M102.5,285.4c0,0,13,30,43,20s40-90,70-85s34,65,64,50c30-15,58-105,118-147';
 
 const easeOut = Easing.out(Easing.cubic);
 
-function WorthwithLogo() {
+function WithworthLogo() {
   return (
     <Svg width={100} height={100} viewBox="0 0 500 500">
       <Path
         d={LOGO_PATH}
         stroke="#FFFFFF"
-        strokeWidth={30}
+        strokeWidth={28}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
-      <Circle cx={152} cy={342} r={36} fill={PURPLE} />
-      <Circle cx={284} cy={306} r={36} fill={ORANGE} />
+      <Circle cx={136.7} cy={353.8} r={22.8} fill={ORANGE} />
+      <Circle cx={271.2} cy={320.7} r={25.7} fill={PURPLE} />
     </Svg>
   );
 }
 
 function Wordmark() {
-  const word = 'worthwith';
   return (
     <Text style={styles.wordmarkBase}>
-      {word.split('').map((char, i) => {
-        let color: string = '#FFFFFF';
-        if (char === 'o') color = PURPLE;
-        if (char === 'i') color = ORANGE;
-        return (
-          <Text key={`${char}-${i}`} style={{ color }}>
-            {char}
-          </Text>
-        );
-      })}
+      w<Text style={styles.wordmarkI}>i</Text>th w<Text style={styles.wordmarkO}>o</Text>rth
     </Text>
   );
 }
 
-export type WorthwithSplashScreenProps = {
+export type WithworthSplashScreenProps = {
   onStartPress?: () => void;
 };
 
-export function WorthwithSplashScreen({ onStartPress }: WorthwithSplashScreenProps) {
+export function WithworthSplashScreen({ onStartPress }: WithworthSplashScreenProps) {
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoY = useRef(new Animated.Value(18)).current;
   const wordOpacity = useRef(new Animated.Value(0)).current;
@@ -117,7 +107,7 @@ export function WorthwithSplashScreen({ onStartPress }: WorthwithSplashScreenPro
             transform: [{ translateY: logoY }],
           }}
         >
-          <WorthwithLogo />
+          <WithworthLogo />
         </Animated.View>
 
         <Animated.View
@@ -176,6 +166,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     color: '#FFFFFF',
     fontWeight: Platform.OS === 'android' ? '800' : undefined,
+  },
+  wordmarkI: {
+    color: ORANGE,
+  },
+  wordmarkO: {
+    color: PURPLE,
   },
   tagline: {
     marginTop: 10,

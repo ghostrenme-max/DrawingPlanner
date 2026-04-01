@@ -1,5 +1,5 @@
 {
-  "name": "worthwith",
+  "name": "withworth",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@fontsource/dm-mono": "^5.2.7",
+    "@fontsource/inter": "^5.2.8",
     "@fontsource/syne": "^5.2.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

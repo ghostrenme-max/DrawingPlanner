@@ -1,80 +1,89 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 
-/** `logo/worthwith-icon.svg`와 동일한 W 곡선 (viewBox 0 0 500 500) */
+/** `logo/worthwith.svg` W 곡선 (viewBox 0 0 500 500) */
 const W_PATH =
   'M102.5,285.4c0,0,13,30,43,20s40-90,70-85s34,65,64,50c30-15,58-105,118-147'
 
-const PURPLE_DOT = { cx: 136.7, cy: 353.8, r: 22.8 }
-const ORANGE_DOT = { cx: 271.2, cy: 320.7, r: 25.7 }
+/** with → worth 순서: 400ms 주황(i), 750ms 보라(o) — 좌표는 worthwith.svg */
+const DOT_FIRST = { cx: 136.7, cy: 353.8, r: 22.8, fill: '#F97316' }
+const DOT_SECOND = { cx: 271.2, cy: 320.7, r: 25.7, fill: '#7C3AED' }
 
-const wordmarkOuterStyle = {
+const wordmarkShellStyle = {
   fontFamily: "'Inter', sans-serif",
   fontWeight: 800,
   fontSize: '28px',
-  color: 'white',
   letterSpacing: '-0.5px',
+  color: '#FFFFFF',
 }
 
-function closestLengthOnPath(pathEl, cx, cy, steps = 400) {
-  const len = pathEl.getTotalLength()
-  if (len <= 0) return 0
-  let bestL = 0
-  let bestD = Infinity
-  for (let i = 0; i <= steps; i++) {
-    const l = (i / steps) * len
-    const p = pathEl.getPointAtLength(l)
-    const d = (p.x - cx) ** 2 + (p.y - cy) ** 2
-    if (d < bestD) {
-      bestD = d
-      bestL = l
-    }
+const wordmarkWhite = { color: '#FFFFFF' }
+
+function Wordmark({ showI, showO }) {
+  const oStyle = {
+    opacity: showO ? 1 : 0,
+    color: '#7C3AED',
+    transition: 'opacity 300ms ease-out',
   }
-  return bestL
-}
+  const iStyle = {
+    opacity: showI ? 1 : 0,
+    color: '#F97316',
+    transition: 'opacity 300ms ease-out',
+  }
 
-function Wordmark() {
   return (
-    <div className="splash-wordmark">
-      <span style={wordmarkOuterStyle}>
-        w<span style={{ color: '#7C3AED' }}>o</span>rth w<span style={{ color: '#F97316' }}>i</span>th
+    <div className="splash-wordmark" style={{ marginTop: 20, padding: 0, textAlign: 'center' }}>
+      <span style={wordmarkShellStyle}>
+        <span style={wordmarkWhite}>w</span>
+        <span style={iStyle}>i</span>
+        <span style={wordmarkWhite}>th w</span>
+        <span style={oStyle}>o</span>
+        <span style={wordmarkWhite}>rth</span>
       </span>
     </div>
   )
 }
 
+function SplashTagline({ showI, showO }) {
+  const partStyle = (visible) => ({
+    opacity: visible ? 1 : 0,
+    transition: 'opacity 300ms ease-out',
+    color: 'rgba(255, 255, 255, 0.3)',
+  })
+
+  return (
+    <p
+      className="splash-tagline"
+      style={{
+        margin: '10px 0 0',
+        textAlign: 'center',
+        width: '100%',
+        color: 'rgba(255, 255, 255, 0.3)',
+      }}
+    >
+      <span style={partStyle(showI)}>같이,</span>
+      <span style={partStyle(showO)}> 가치있게</span>
+    </p>
+  )
+}
+
 function AnimatedSplashLogo() {
-  const svgRef = useRef(null)
   const pathRef = useRef(null)
 
   useLayoutEffect(() => {
-    const svg = svgRef.current
     const path = pathRef.current
-    if (!svg || !path) return
-
+    if (!path) return
     const len = path.getTotalLength()
     path.style.setProperty('--w-len', String(len))
-
-    const lPurple = closestLengthOnPath(path, PURPLE_DOT.cx, PURPLE_DOT.cy)
-    const lOrange = closestLengthOnPath(path, ORANGE_DOT.cx, ORANGE_DOT.cy)
-
-    /** 선이 그려지는 1000ms와 맞추기: path 위 비율 × 1000ms (ease-in-out과 근사 정렬) */
-    const delayMs = (l) => Math.max(0, Math.round((l / len) * 1000))
-    let msPurple = delayMs(lPurple)
-    let msOrange = delayMs(lOrange)
-    if (msOrange <= msPurple) msOrange = msPurple + 80
-
-    svg.style.setProperty('--splash-dot-purple-delay', `${msPurple}ms`)
-    svg.style.setProperty('--splash-dot-orange-delay', `${msOrange}ms`)
   }, [])
 
   return (
     <svg
-      ref={svgRef}
       className="splash-logo-svg"
       viewBox="0 0 500 500"
       width={100}
       height={100}
+      preserveAspectRatio="xMidYMid meet"
       aria-hidden
     >
       <path
@@ -82,26 +91,42 @@ function AnimatedSplashLogo() {
         className="splash-logo-w-path"
         d={W_PATH}
         fill="none"
-      />
-      <circle
-        className="splash-logo-dot splash-logo-dot--purple"
-        cx={PURPLE_DOT.cx}
-        cy={PURPLE_DOT.cy}
-        r={PURPLE_DOT.r}
-        fill="#7C3AED"
+        stroke="#FFFFFF"
+        strokeWidth={28}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <circle
         className="splash-logo-dot splash-logo-dot--orange"
-        cx={ORANGE_DOT.cx}
-        cy={ORANGE_DOT.cy}
-        r={ORANGE_DOT.r}
-        fill="#F97316"
+        cx={DOT_FIRST.cx}
+        cy={DOT_FIRST.cy}
+        r={DOT_FIRST.r}
+        fill={DOT_FIRST.fill}
+      />
+      <circle
+        className="splash-logo-dot splash-logo-dot--purple"
+        cx={DOT_SECOND.cx}
+        cy={DOT_SECOND.cy}
+        r={DOT_SECOND.r}
+        fill={DOT_SECOND.fill}
       />
     </svg>
   )
 }
 
 function App() {
+  const [showI, setShowI] = useState(false)
+  const [showO, setShowO] = useState(false)
+
+  useEffect(() => {
+    const tI = window.setTimeout(() => setShowI(true), 400)
+    const tO = window.setTimeout(() => setShowO(true), 750)
+    return () => {
+      window.clearTimeout(tI)
+      window.clearTimeout(tO)
+    }
+  }, [])
+
   useEffect(() => {
     const t = window.setTimeout(() => {
       console.log('navigate')
@@ -110,21 +135,68 @@ function App() {
   }, [])
 
   return (
-    <div className="device-stage">
-      <div className="device-frame">
-        <div className="splash">
-          <div className="splash-center">
+    <div
+      className="device-stage"
+      style={{
+        minHeight: '100dvh',
+        width: '100%',
+        margin: 0,
+        backgroundColor: '#0d0d0d',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        className="device-frame"
+        style={{
+          width: 390,
+          height: 844,
+          backgroundColor: '#1a1a2e',
+          borderRadius: 48,
+          overflow: 'hidden',
+          position: 'relative',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          className="splash"
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            margin: 0,
+            backgroundColor: '#1a1a2e',
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            className="splash-center"
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 0,
+              boxSizing: 'border-box',
+            }}
+          >
             <div className="splash-logo-block">
               <AnimatedSplashLogo />
             </div>
 
-            <div className="splash-fade splash-fade--hug splash-fade--1200">
-              <Wordmark />
+            <div
+              className="splash-fade--hug"
+              style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
+            >
+              <Wordmark showI={showI} showO={showO} />
             </div>
 
-            <p className="splash-tagline splash-fade splash-fade--1350">
-              같이, 가치있게
-            </p>
+            <SplashTagline showI={showI} showO={showO} />
           </div>
         </div>
       </div>

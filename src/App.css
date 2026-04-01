@@ -113,14 +113,14 @@
   transform: scale(0);
 }
 
-.splash-logo-dot--purple {
-  animation: splash-dot-pop 300ms ease-out forwards;
-  animation-delay: var(--splash-dot-purple-delay, 400ms);
-}
-
 .splash-logo-dot--orange {
   animation: splash-dot-pop 300ms ease-out forwards;
-  animation-delay: var(--splash-dot-orange-delay, 750ms);
+  animation-delay: 400ms;
+}
+
+.splash-logo-dot--purple {
+  animation: splash-dot-pop 300ms ease-out forwards;
+  animation-delay: 750ms;
 }
 
 .splash-wordmark {
