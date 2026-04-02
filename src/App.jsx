@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import MainTracker from './MainTracker.jsx'
 import './App.css'
 
 /** `logo/worthwith.svg` W 곡선 (viewBox 0 0 500 500) */
@@ -17,8 +18,11 @@ const SPLASH_SEQUENCE_START_MS = 500
 /** 원 pop 애니메이션과 i·같이 / o·가치있게 opacity 전환을 동일 길이로 맞춤 */
 const SPLASH_POP_MS = 300
 
-/** 태그라인 자간 애니메이션 길이(같이·가치있게 동일, ease-in-out) */
-const SPLASH_TAGLINE_SPREAD_MS = 680
+/** 「같이」 자간이 모이는 구간 길이(충분히 보이게) */
+const SPLASH_GATI_SPREAD_MS = 1250
+
+/** 「가치있게」 자간 펼침 길이 */
+const SPLASH_WORTH_SPREAD_MS = 680
 
 /** 같이 자간 끝난 뒤 → 가치있게 자간 시작까지 최소 여유(ms). o 타이밍보다 앞당기지 않도록 max 처리 */
 const SPLASH_TAGLINE_AFTER_GATI_MS = 160
@@ -175,6 +179,7 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 }
 
 function App() {
+  const [screen, setScreen] = useState(/** @type {'splash' | 'main'} */ ('splash'))
   const [splashTiming, setSplashTiming] = useState(null)
 
   const onSplashMeasured = useCallback((raw) => {
@@ -187,13 +192,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (splashTiming === null) return
-    const afterO = splashTiming.oMs + 800
-    const t = window.setTimeout(() => {
-      console.log('navigate')
-    }, Math.max(2200, afterO))
+    const t = window.setTimeout(() => setScreen('main'), 4500)
     return () => window.clearTimeout(t)
-  }, [splashTiming])
+  }, [])
 
   return (
     <div
@@ -221,57 +222,62 @@ function App() {
           flexShrink: 0,
         }}
       >
-        <div
-          className="splash"
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            margin: 0,
-            backgroundColor: '#17161a',
-            display: 'flex',
-            flexDirection: 'column',
-            boxSizing: 'border-box',
-          }}
-        >
+        {screen === 'splash' ? (
           <div
-            className={`splash-center${splashTiming ? ' splash-center--sync' : ''}`}
+            className="splash"
             style={{
-              flex: 1,
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              margin: 0,
+              backgroundColor: '#17161a',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 0,
               boxSizing: 'border-box',
-              ...(splashTiming
-                ? {
-                    ['--splash-sync-i-delay']: `${splashTiming.iMs}ms`,
-                    ['--splash-sync-o-delay']: `${splashTiming.oMs}ms`,
-                    ['--splash-sync-pop']: `${SPLASH_POP_MS}ms`,
-                    ['--splash-tagline-spread-ms']: `${SPLASH_TAGLINE_SPREAD_MS}ms`,
-                    ['--splash-worth-spread-delay']: `${Math.max(
-                      splashTiming.oMs,
-                      splashTiming.iMs + SPLASH_TAGLINE_SPREAD_MS + SPLASH_TAGLINE_AFTER_GATI_MS,
-                    )}ms`,
-                  }
-                : {}),
             }}
           >
-            <div className="splash-logo-block">
-              <AnimatedSplashLogo timing={splashTiming} onMeasured={onSplashMeasured} />
-            </div>
-
             <div
-              className="splash-fade--hug"
-              style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
+              className={`splash-center${splashTiming ? ' splash-center--sync' : ''}`}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 0,
+                boxSizing: 'border-box',
+                ...(splashTiming
+                  ? {
+                      ['--splash-sync-i-delay']: `${splashTiming.iMs}ms`,
+                      ['--splash-sync-o-delay']: `${splashTiming.oMs}ms`,
+                      ['--splash-sync-pop']: `${SPLASH_POP_MS}ms`,
+                      ['--splash-gati-spread-ms']: `${SPLASH_GATI_SPREAD_MS}ms`,
+                      ['--splash-worth-spread-ms']: `${SPLASH_WORTH_SPREAD_MS}ms`,
+                      ['--splash-worth-spread-delay']: `${Math.max(
+                        splashTiming.oMs,
+                        splashTiming.iMs + SPLASH_GATI_SPREAD_MS + SPLASH_TAGLINE_AFTER_GATI_MS,
+                      )}ms`,
+                    }
+                  : {}),
+              }}
             >
-              <Wordmark />
-            </div>
+              <div className="splash-logo-block">
+                <AnimatedSplashLogo timing={splashTiming} onMeasured={onSplashMeasured} />
+              </div>
 
-            <SplashTagline />
+              <div
+                className="splash-fade--hug"
+                style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
+              >
+                <Wordmark />
+              </div>
+
+              <SplashTagline />
+            </div>
           </div>
-        </div>
+        ) : (
+          <MainTracker />
+        )}
       </div>
     </div>
   )

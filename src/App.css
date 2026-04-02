@@ -38,10 +38,10 @@
   }
 }
 
-/* 같이: 태그라인(4px)보다 한동안 더 벌어졌다가 모임 — 변화 폭을 키워 속도감 확보, 끝은 겹침 없이 */
+/* 같이: 시작은 크게 벌림 → 1.25s ease-in-out 로 천천히 모임(변화 폭 크게) */
 @keyframes splash-gati-tighten {
   from {
-    letter-spacing: 10px;
+    letter-spacing: 18px;
   }
   to {
     letter-spacing: 1px;
@@ -212,11 +212,11 @@
 
 .splash-tagline-gati-tighten {
   display: inline-block;
-  letter-spacing: 10px;
+  letter-spacing: 18px;
 }
 
 .splash-center--sync .splash-sync-i .splash-tagline-gati-tighten {
-  animation: splash-gati-tighten var(--splash-tagline-spread-ms, 680ms) ease-in-out forwards;
+  animation: splash-gati-tighten var(--splash-gati-spread-ms, 1250ms) ease-in-out forwards;
   animation-delay: var(--splash-sync-i-delay);
   animation-fill-mode: both;
 }
@@ -231,7 +231,7 @@
 }
 
 .splash-center--sync .splash-sync-o .splash-tagline-worth-spread {
-  animation: splash-worth-spread var(--splash-tagline-spread-ms, 680ms) ease-in-out forwards;
+  animation: splash-worth-spread var(--splash-worth-spread-ms, 680ms) ease-in-out forwards;
   /* 같이 자간 끝 + 여유 후 시작, 단 청록 타이밍(o)보다는 앞서지 않음 */
   animation-delay: var(--splash-worth-spread-delay, var(--splash-sync-o-delay));
   animation-fill-mode: both;

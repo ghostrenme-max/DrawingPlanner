@@ -1,0 +1,259 @@
+.main-tracker {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background-color: #17161a;
+  box-sizing: border-box;
+}
+
+.mt-header {
+  flex-shrink: 0;
+  padding: 16px;
+  background-color: #17161a;
+  box-sizing: border-box;
+}
+
+.mt-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mt-wordmark {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.mt-wordmark-w {
+  color: #ffffff;
+}
+
+.mt-wordmark-i {
+  color: #fb923c;
+}
+
+.mt-wordmark-o {
+  color: #2dd4bf;
+}
+
+.mt-progress-block {
+  text-align: right;
+}
+
+.mt-progress-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: 36px;
+  font-weight: 400;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.mt-progress-today {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 4px;
+  letter-spacing: 0.06em;
+}
+
+.mt-bar-track {
+  margin-top: 14px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.mt-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #fb923c;
+  width: var(--mt-bar-pct, 64%);
+}
+
+.mt-segments {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.mt-segment {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mt-segment--done {
+  background: #fb923c;
+}
+
+.mt-segment--active {
+  background: #2dd4bf;
+}
+
+.mt-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mt-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mt-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.mt-card-add {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  padding: 16px;
+}
+
+.mt-card-add-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.mt-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mt-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.15);
+  border-radius: 20px;
+  padding: 4px 10px;
+  line-height: 1;
+}
+
+.mt-card-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #fb923c;
+}
+
+.mt-card-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 8px;
+  letter-spacing: 0.02em;
+}
+
+.mt-card-bar {
+  margin-top: 10px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.mt-card-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #fb923c;
+  width: var(--card-pct, 0%);
+}
+
+.mt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.mt-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 400;
+  border-radius: 6px;
+  padding: 3px 7px;
+  line-height: 1.2;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.mt-chip--done {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border-color: #fb923c;
+}
+
+.mt-chip--active {
+  background: rgba(45, 212, 191, 0.15);
+  color: #2dd4bf;
+  border-color: #2dd4bf;
+}
+
+.mt-nav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 10px 8px 14px;
+  background: #17161a;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+}
+
+.mt-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 56px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.mt-nav-item--active {
+  color: #fb923c;
+}
+
+.mt-nav-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.mt-nav-item--active .mt-nav-icon {
+  opacity: 1;
+}
