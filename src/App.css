@@ -19,10 +19,42 @@
   from {
     opacity: 0;
     transform: scale(0);
+    visibility: hidden;
   }
   to {
     opacity: 1;
     transform: scale(1);
+    visibility: visible;
+  }
+}
+
+/* 원과 동일 delay·duration(ease-out) — setTimeout 대신 CSS로 맞춤 */
+@keyframes splash-text-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 같이: 태그라인(4px)보다 한동안 더 벌어졌다가 모임 — 변화 폭을 키워 속도감 확보, 끝은 겹침 없이 */
+@keyframes splash-gati-tighten {
+  from {
+    letter-spacing: 10px;
+  }
+  to {
+    letter-spacing: 1px;
+  }
+}
+
+/* 가치있게: 뭉친 자간에서 줄 전체 리듬(4px)으로 펼침 (같이와 반대 방향·동일 시간·ease-in-out) */
+@keyframes splash-worth-spread {
+  from {
+    letter-spacing: -0.14em;
+  }
+  to {
+    letter-spacing: 4px;
   }
 }
 
@@ -41,7 +73,7 @@
 .device-frame {
   width: 390px;
   height: 844px;
-  background-color: #1a1a2e;
+  background-color: #17161a;
   border-radius: 48px;
   overflow: hidden;
   position: relative;
@@ -53,7 +85,7 @@
   width: 100%;
   height: 100%;
   margin: 0;
-  background-color: #1a1a2e;
+  background-color: #17161a;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -95,15 +127,27 @@
   display: block;
 }
 
+/* 측정 전 폴백(600)으로 애니메이션이 돌면 실제 길이와 어긋나 첫 프레임에 곡선·원이 이미 보임 */
 .splash-logo-w-path {
   fill: none;
   stroke: #ffffff;
   stroke-width: 28;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: var(--w-len, 600);
-  stroke-dashoffset: var(--w-len, 600);
-  animation: splash-draw-w 1000ms ease-in-out forwards;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-logo-svg--ready .splash-logo-w-path {
+  opacity: 1;
+  stroke-dasharray: var(--w-len);
+  stroke-dashoffset: var(--w-len);
+  /* linear: path 길이 비율과 시간이 1:1이라 원·글자 지연(ms)과 동기 */
+  /* both: delay 중엔 곡선 숨김(backwards), 끝난 뒤엔 완성된 선 유지(forwards).
+   * backwards만 두면 단축 속성의 forwards가 덮여서 마지막에 dashoffset이 다시 전체 길이로 돌아가 선이 사라짐 */
+  animation: splash-draw-w 1000ms linear forwards;
+  animation-delay: var(--splash-draw-delay, 0ms);
+  animation-fill-mode: both;
 }
 
 .splash-logo-dot {
@@ -111,16 +155,22 @@
   transform-box: fill-box;
   opacity: 0;
   transform: scale(0);
+  visibility: hidden;
 }
 
-.splash-logo-dot--orange {
-  animation: splash-dot-pop 300ms ease-out forwards;
-  animation-delay: 400ms;
+/* 준비 전에는 점 애니메이션·폴백 delay 없음 → 주황이 처음부터 보이지 않음 */
+.splash-logo-svg--ready .splash-logo-dot {
+  animation-fill-mode: both;
 }
 
-.splash-logo-dot--purple {
-  animation: splash-dot-pop 300ms ease-out forwards;
-  animation-delay: 750ms;
+.splash-logo-svg--ready .splash-logo-dot--first {
+  animation: splash-dot-pop var(--splash-dot-pop-duration, 300ms) ease-out forwards;
+  animation-delay: var(--splash-dot-i-delay);
+}
+
+.splash-logo-svg--ready .splash-logo-dot--second {
+  animation: splash-dot-pop var(--splash-dot-pop-duration, 300ms) ease-out forwards;
+  animation-delay: var(--splash-dot-o-delay);
 }
 
 .splash-wordmark {
@@ -133,7 +183,56 @@
   font-family: 'DM Mono', monospace;
   font-weight: 400;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
   letter-spacing: 4px;
   line-height: 1.4;
+}
+
+.splash-sync-i,
+.splash-sync-o {
+  opacity: 0;
+}
+
+.splash-center--sync .splash-sync-i {
+  animation: splash-text-reveal var(--splash-sync-pop, 300ms) ease-out forwards;
+  animation-delay: var(--splash-sync-i-delay);
+  animation-fill-mode: both;
+}
+
+.splash-center--sync .splash-sync-o {
+  animation: splash-text-reveal var(--splash-sync-pop, 300ms) ease-out forwards;
+  animation-delay: var(--splash-sync-o-delay);
+  animation-fill-mode: both;
+}
+
+/* 같이: 처음은 p와 동일하게 벌어짐 → ease-in-out 로 붙음 */
+.splash-tagline-gati {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.splash-tagline-gati-tighten {
+  display: inline-block;
+  letter-spacing: 10px;
+}
+
+.splash-center--sync .splash-sync-i .splash-tagline-gati-tighten {
+  animation: splash-gati-tighten var(--splash-tagline-spread-ms, 680ms) ease-in-out forwards;
+  animation-delay: var(--splash-sync-i-delay);
+  animation-fill-mode: both;
+}
+
+.splash-tagline-worth-lead {
+  display: inline;
+}
+
+.splash-tagline-worth-spread {
+  display: inline-block;
+  letter-spacing: -0.14em;
+}
+
+.splash-center--sync .splash-sync-o .splash-tagline-worth-spread {
+  animation: splash-worth-spread var(--splash-tagline-spread-ms, 680ms) ease-in-out forwards;
+  /* 같이 자간 끝 + 여유 후 시작, 단 청록 타이밍(o)보다는 앞서지 않음 */
+  animation-delay: var(--splash-worth-spread-delay, var(--splash-sync-o-delay));
+  animation-fill-mode: both;
 }

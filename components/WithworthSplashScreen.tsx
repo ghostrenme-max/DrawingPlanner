@@ -14,9 +14,9 @@ import Svg, { Path, Circle } from 'react-native-svg';
 const FONT_WORDMARK = 'Syne_800ExtraBold';
 const FONT_MONO = 'DMMono_400Regular';
 
-const BG = '#1A1A2E';
-const PURPLE = '#7C3AED';
-const ORANGE = '#F97316';
+const BG = '#17161A';
+const COLOR_I = '#FB923C';
+const COLOR_O = '#2DD4BF';
 
 const LOGO_PATH =
   'M102.5,285.4c0,0,13,30,43,20s40-90,70-85s34,65,64,50c30-15,58-105,118-147';
@@ -34,8 +34,8 @@ function WithworthLogo() {
         strokeLinejoin="round"
         fill="none"
       />
-      <Circle cx={136.7} cy={353.8} r={22.8} fill={ORANGE} />
-      <Circle cx={271.2} cy={320.7} r={25.7} fill={PURPLE} />
+      <Circle cx={136.7} cy={353.8} r={22.8} fill={COLOR_I} />
+      <Circle cx={271.2} cy={320.7} r={25.7} fill={COLOR_O} />
     </Svg>
   );
 }
@@ -125,7 +125,8 @@ export function WithworthSplashScreen({ onStartPress }: WithworthSplashScreenPro
             { opacity: tagOpacity, transform: [{ translateY: tagY }] },
           ]}
         >
-          같이, 가치있게
+          <Text style={{ color: COLOR_I }}>같이,</Text>
+          <Text style={{ color: COLOR_O }}> 가치있게</Text>
         </Animated.Text>
       </View>
 
@@ -168,17 +169,16 @@ const styles = StyleSheet.create({
     fontWeight: Platform.OS === 'android' ? '800' : undefined,
   },
   wordmarkI: {
-    color: ORANGE,
+    color: COLOR_I,
   },
   wordmarkO: {
-    color: PURPLE,
+    color: COLOR_O,
   },
   tagline: {
     marginTop: 10,
     fontFamily: FONT_MONO,
     fontSize: 11,
     letterSpacing: 4,
-    color: 'rgba(255,255,255,0.3)',
     fontWeight: Platform.OS === 'android' ? '400' : undefined,
   },
   ctaWrap: {
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cta: {
-    backgroundColor: PURPLE,
+    backgroundColor: COLOR_I,
     borderRadius: 50,
     paddingVertical: 14,
     paddingHorizontal: 52,
