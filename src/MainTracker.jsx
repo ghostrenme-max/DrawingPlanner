@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { DEFAULT_APP_FEATURES } from './appFeatures.js'
+import {
+  applyGoalDisplayBreaks,
+  GOAL_1Y_TRACKER_SAMPLE_TEXT,
+  splitGoalHeaderParagraphs,
+} from './goalConfig.js'
 import BrandWordmark from './BrandWordmark'
 import PlusIcon from './PlusIcon'
 import './MainTracker.css'
@@ -107,7 +113,19 @@ function CardHeadProgress({ displayTag, targetPct, accent, replayKey, introNonce
   )
 }
 
-function MainTracker({ onTabChange, onAddGalleryItem, trackerBarReplayKey = 0 }) {
+function MainTracker({
+  onTabChange,
+  onAddGalleryItem,
+  trackerBarReplayKey = 0,
+  features = DEFAULT_APP_FEATURES,
+  showGoal1yTipCard = false,
+  showGoal1ySampleFixed = false,
+  showGoal1yPinned = false,
+  onConfirmGoal1yTip,
+  onDismissGoal1yTip,
+  goal1yValue = '',
+  onGoal1yChange,
+}) {
   const [cards, setCards] = useState(() =>
     SAMPLE_CARDS.map((c) => ({ ...c, barIntroNonce: 0 })),
   )
@@ -321,10 +339,12 @@ function MainTracker({ onTabChange, onAddGalleryItem, trackerBarReplayKey = 0 })
             {hdrPctDisplay}
             <sup>%</sup>
           </div>
-          <div className="mt-prog-meta">
-            <span className="mt-date-ymd">{todayYmd}</span>
-            <span className="mt-today">TODAY</span>
-          </div>
+          {features.workTimer ? (
+            <div className="mt-prog-meta">
+              <span className="mt-date-ymd">{todayYmd}</span>
+              <span className="mt-today">TODAY</span>
+            </div>
+          ) : null}
         </div>
         <div className="mt-bar">
           <div
@@ -333,6 +353,55 @@ function MainTracker({ onTabChange, onAddGalleryItem, trackerBarReplayKey = 0 })
           />
         </div>
       </header>
+
+      {showGoal1yTipCard ? (
+        <div className="mt-goal-tracker-strip" role="region" aria-label="1년 목표 입력 안내">
+          <p className="mt-goal-tip-bar-text">
+            아래에 <strong>1년 목표</strong>를 적고 <strong>확정</strong>하면 그대로 유지돼요. 이후에는{' '}
+            <strong>설정</strong> 탭에서만 바꿀 수 있어요.
+          </p>
+          <textarea
+            className="mt-goal-1y-quick-input"
+            value={goal1yValue}
+            onChange={(e) => onGoal1yChange?.(e.target.value)}
+            placeholder="예: 올해 메인 일러스트·포트폴리오 마무리"
+            rows={2}
+            aria-label="1년 목표 빠른 입력"
+          />
+          <div className="mt-goal-tip-bar-actions">
+            <button
+              type="button"
+              className="mt-goal-tip-bar-btn mt-goal-tip-bar-btn--primary"
+              onClick={() => onConfirmGoal1yTip?.()}
+            >
+              확정
+            </button>
+            <button type="button" className="mt-goal-tip-bar-btn" onClick={() => onDismissGoal1yTip?.()}>
+              닫기
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showGoal1ySampleFixed ? (
+        <div className="mt-goal-sample-stack" role="status" aria-label="1년 목표 예시">
+          {splitGoalHeaderParagraphs(GOAL_1Y_TRACKER_SAMPLE_TEXT).map((para, i) => (
+            <p key={i} className="mt-goal-sample-stack-p">
+              {applyGoalDisplayBreaks(para)}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
+      {showGoal1yPinned ? (
+        <div className="mt-goal-pinned-stack" role="status" aria-label="1년 목표">
+          {splitGoalHeaderParagraphs(goal1yValue).map((para, i) => (
+            <p key={i} className="mt-goal-pinned-stack-p">
+              {applyGoalDisplayBreaks(para)}
+            </p>
+          ))}
+        </div>
+      ) : null}
 
       <main className="mt-scroll">
         {cards.map((card) => {
@@ -361,58 +430,64 @@ function MainTracker({ onTabChange, onAddGalleryItem, trackerBarReplayKey = 0 })
 
               {expanded && (
                 <div className="mt-card-detail">
-                  {STAGES.map((st) => {
-                    const done = stageDone[`${card.id}-${st.id}`]
-                    return (
-                      <div key={st.id} className={`mt-detail-row${done ? ' mt-detail-row--done' : ''}`}>
-                        <button
-                          type="button"
-                          className={`mt-check ${done ? 'mt-check--on' : ''}`}
-                          onClick={() => toggleStage(card.id, st.id)}
-                          aria-pressed={done}
-                        />
-                        <span className="mt-detail-label">{st.label}</span>
-                      </div>
-                    )
-                  })}
+                  {features.selfFeedback
+                    ? STAGES.map((st) => {
+                        const done = stageDone[`${card.id}-${st.id}`]
+                        return (
+                          <div key={st.id} className={`mt-detail-row${done ? ' mt-detail-row--done' : ''}`}>
+                            <button
+                              type="button"
+                              className={`mt-check ${done ? 'mt-check--on' : ''}`}
+                              onClick={() => toggleStage(card.id, st.id)}
+                              aria-pressed={done}
+                            />
+                            <span className="mt-detail-label">{st.label}</span>
+                          </div>
+                        )
+                      })
+                    : null}
 
-                  <div className="mt-slots">
-                    {[0, 1, 2].map((slotIdx) => {
-                      const url = urls[slotIdx]
-                      if (url) {
+                  {features.imageUploadSlot ? (
+                    <div className="mt-slots">
+                      {[0, 1, 2].map((slotIdx) => {
+                        const url = urls[slotIdx]
+                        if (url) {
+                          return (
+                            <button
+                              key={slotIdx}
+                              type="button"
+                              className="mt-slot mt-slot--filled"
+                              onClick={() => openFilePicker(card.id)}
+                            >
+                              <img src={url} alt="" />
+                            </button>
+                          )
+                        }
                         return (
                           <button
                             key={slotIdx}
                             type="button"
-                            className="mt-slot mt-slot--filled"
+                            className="mt-slot mt-slot--empty"
                             onClick={() => openFilePicker(card.id)}
+                            aria-label="이미지 추가"
                           >
-                            <img src={url} alt="" />
+                            <PlusIcon className="mt-slot-plus" />
                           </button>
                         )
-                      }
-                      return (
-                        <button
-                          key={slotIdx}
-                          type="button"
-                          className="mt-slot mt-slot--empty"
-                          onClick={() => openFilePicker(card.id)}
-                          aria-label="이미지 추가"
-                        >
-                          <PlusIcon className="mt-slot-plus" />
-                        </button>
-                      )
-                    })}
-                  </div>
+                      })}
+                    </div>
+                  ) : null}
 
-                  <button
-                    type="button"
-                    className={`mt-gallery-send${urls.length === 0 ? ' mt-gallery-send--empty' : ''}`}
-                    onClick={() => onGallerySendClick(card)}
-                    aria-disabled={urls.length === 0}
-                  >
-                    ✓ 완성했어요 — 갤러리에 담기
-                  </button>
+                  {features.gallery ? (
+                    <button
+                      type="button"
+                      className={`mt-gallery-send${urls.length === 0 ? ' mt-gallery-send--empty' : ''}`}
+                      onClick={() => onGallerySendClick(card)}
+                      aria-disabled={urls.length === 0}
+                    >
+                      ✓ 완성했어요 — 갤러리에 담기
+                    </button>
+                  ) : null}
                 </div>
               )}
             </article>
@@ -429,14 +504,18 @@ function MainTracker({ onTabChange, onAddGalleryItem, trackerBarReplayKey = 0 })
           <span className="mt-nav-icon" aria-hidden />
           트래커
         </button>
-        <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('goal')}>
-          <span className="mt-nav-icon" aria-hidden />
-          목표
-        </button>
-        <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('gallery')}>
-          <span className="mt-nav-icon" aria-hidden />
-          갤러리
-        </button>
+        {features.goalScreen ? (
+          <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('goal')}>
+            <span className="mt-nav-icon" aria-hidden />
+            목표
+          </button>
+        ) : null}
+        {features.gallery ? (
+          <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('gallery')}>
+            <span className="mt-nav-icon" aria-hidden />
+            갤러리
+          </button>
+        ) : null}
         <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('settings')}>
           <span className="mt-nav-icon" aria-hidden />
           설정

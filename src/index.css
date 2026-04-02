@@ -1,3 +1,10 @@
+:root {
+  --ww-main: #fb923c;
+  --ww-sub: #2dd4bf;
+  --ww-main-rgb: 251, 146, 60;
+  --ww-sub-rgb: 45, 212, 191;
+}
+
 *,
 *::before,
 *::after {

@@ -22,6 +22,200 @@
   flex-shrink: 0;
 }
 
+/* —— 첫 실행·예시 단계 공통: 안내 카드 + 설정/닫기 —— */
+.mt-goal-tracker-strip {
+  flex-shrink: 0;
+  margin: 0 14px 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--ww-main-rgb), 0.38);
+  background: rgba(16, 20, 20, 0.96);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  animation: mt-goal-tip-bar-in 280ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes mt-goal-tip-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mt-goal-tip-bar-text {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  text-wrap: balance;
+}
+
+.mt-goal-tip-bar-text strong {
+  font-weight: 700;
+  color: var(--ww-main);
+}
+
+.mt-goal-1y-quick-input {
+  display: block;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  resize: vertical;
+  min-height: 44px;
+  max-height: 120px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mt-goal-1y-quick-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.mt-goal-1y-quick-input:focus {
+  outline: none;
+  border-color: rgba(var(--ww-main-rgb), 0.55);
+  box-shadow: 0 0 0 1px rgba(var(--ww-main-rgb), 0.25);
+}
+
+.mt-goal-tip-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mt-goal-tip-bar-btn {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mt-goal-tip-bar-btn--primary {
+  border-color: rgba(var(--ww-main-rgb), 0.55);
+  background: rgba(var(--ww-main-rgb), 0.14);
+  color: var(--ww-main);
+}
+
+.mt-goal-tip-bar-btn:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-goal-tracker-strip {
+    animation-duration: 0.01ms;
+  }
+}
+
+/* 닫기 후: 카드 없이 샘플만 — 목표 탭 1년과 동일 톤·중앙·문단 */
+.mt-goal-sample-stack {
+  flex-shrink: 0;
+  margin: 2px 18px 14px;
+  padding: 0;
+  box-sizing: border-box;
+  animation: mt-goal-sample-fixed-in 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.mt-goal-sample-stack-p {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: #ffffff;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.mt-goal-sample-stack-p + .mt-goal-sample-stack-p {
+  margin-top: 0.7em;
+}
+
+@keyframes mt-goal-sample-fixed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-goal-sample-stack {
+    animation-duration: 0.01ms;
+  }
+}
+
+/* 확정 후: 사용자 1년 목표 — 샘플 고정 영역과 동일 톤·중앙·문단 */
+.mt-goal-pinned-stack {
+  flex-shrink: 0;
+  margin: 2px 18px 14px;
+  padding: 0;
+  box-sizing: border-box;
+  animation: mt-goal-pinned-in 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.mt-goal-pinned-stack-p {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: #ffffff;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.mt-goal-pinned-stack-p + .mt-goal-pinned-stack-p {
+  margin-top: 0.7em;
+}
+
+@keyframes mt-goal-pinned-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-goal-pinned-stack {
+    animation-duration: 0.01ms;
+  }
+}
+
 .mt-brand {
   margin-bottom: 12px;
 }
@@ -58,7 +252,7 @@
 
 .mt-prog-pct sup {
   font-size: 11px;
-  color: #fb923c;
+  color: var(--ww-main);
   margin-left: 1px;
   vertical-align: super;
 }
@@ -68,7 +262,7 @@
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.12em;
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 .mt-bar {
@@ -83,7 +277,7 @@
   height: 100%;
   width: 0;
   max-width: 100%;
-  background: linear-gradient(90deg, #fb923c, #f97316);
+  background: linear-gradient(90deg, var(--ww-main), color-mix(in srgb, var(--ww-main), #000 18%));
   border-radius: 2px;
   transition: width 980ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -134,7 +328,7 @@
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 .mt-card-pct {
@@ -144,11 +338,11 @@
 }
 
 .mt-card[data-accent='orange'] .mt-card-pct {
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 .mt-card[data-accent='teal'] .mt-card-pct {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-card-bar {
@@ -163,7 +357,7 @@
   height: 100%;
   width: 0;
   max-width: 100%;
-  background: #fb923c;
+  background: var(--ww-main);
   border-radius: 1px;
   transition: width 980ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -173,11 +367,11 @@
 }
 
 .mt-card-bar-fill--teal {
-  background: #2dd4bf;
+  background: var(--ww-sub);
 }
 
 .mt-card[data-accent='teal'] .mt-card-tag {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-card-detail {
@@ -210,8 +404,8 @@
 }
 
 .mt-check--on {
-  background: rgba(45, 212, 191, 0.15);
-  border-color: #2dd4bf;
+  background: rgba(var(--ww-sub-rgb), 0.15);
+  border-color: var(--ww-sub);
   position: relative;
 }
 
@@ -222,7 +416,7 @@
   top: 1px;
   width: 4px;
   height: 8px;
-  border: solid #2dd4bf;
+  border: solid var(--ww-sub);
   border-width: 0 1.5px 1.5px 0;
   transform: rotate(45deg);
 }
@@ -233,7 +427,7 @@
 }
 
 .mt-detail-row--done .mt-detail-label {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 /* —— Image slots —— */
@@ -261,7 +455,7 @@
 }
 
 .mt-slot-plus {
-  color: #2dd4bf;
+  color: var(--ww-sub);
   width: 18px;
   height: 18px;
 }
@@ -277,14 +471,14 @@
   object-fit: cover;
 }
 
-/* 전신/반신(teal 카드) 태그·%와 동일 #2dd4bf — 이미지 있을 때만 밝게 */
+/* 전신/반신(teal 카드) 태그·%와 동일 var(--ww-sub) — 이미지 있을 때만 밝게 */
 .mt-gallery-send {
   width: 100%;
   padding: 11px;
   border-radius: 6px;
-  border: 1px solid rgba(45, 212, 191, 0.35);
-  background: rgba(45, 212, 191, 0.06);
-  color: rgba(45, 212, 191, 0.45);
+  border: 1px solid rgba(var(--ww-sub-rgb), 0.35);
+  background: rgba(var(--ww-sub-rgb), 0.06);
+  color: rgba(var(--ww-sub-rgb), 0.45);
   font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
   font-size: 9px;
   font-weight: 500;
@@ -295,9 +489,9 @@
 }
 
 .mt-gallery-send:not(.mt-gallery-send--empty) {
-  border-color: #2dd4bf;
-  background: rgba(45, 212, 191, 0.1);
-  color: #2dd4bf;
+  border-color: var(--ww-sub);
+  background: rgba(var(--ww-sub-rgb), 0.1);
+  color: var(--ww-sub);
 }
 
 .mt-gallery-send--empty {
@@ -305,7 +499,7 @@
 }
 
 .mt-gallery-send:focus-visible {
-  outline: 2px solid #fb923c;
+  outline: 2px solid var(--ww-main);
   outline-offset: 2px;
 }
 
@@ -322,7 +516,7 @@
   margin: 0;
   padding: 14px 18px;
   border-radius: 12px;
-  border: 1px solid rgba(45, 212, 191, 0.5);
+  border: 1px solid rgba(var(--ww-sub-rgb), 0.5);
   background: rgba(18, 22, 22, 0.97);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
   box-sizing: border-box;
@@ -390,7 +584,7 @@
   font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: #2dd4bf;
+  color: var(--ww-sub);
   letter-spacing: -0.02em;
 }
 
@@ -400,7 +594,7 @@
   font-size: 11px;
   font-weight: 400;
   line-height: 1.45;
-  color: rgba(45, 212, 191, 0.72);
+  color: rgba(var(--ww-sub-rgb), 0.72);
 }
 
 .mt-sent-ok {
@@ -413,7 +607,7 @@
   font-size: 12px;
   font-weight: 600;
   color: #0a0a0a;
-  background: #2dd4bf;
+  background: var(--ww-sub);
   cursor: pointer;
 }
 
@@ -422,7 +616,7 @@
 }
 
 .mt-sent-ok:focus-visible {
-  outline: 2px solid #fb923c;
+  outline: 2px solid var(--ww-main);
   outline-offset: 2px;
 }
 
@@ -432,7 +626,7 @@
   padding: 16px;
   margin-top: 4px;
   border-radius: 10px;
-  border: 1px dashed rgba(251, 146, 60, 0.4);
+  border: 1px dashed rgba(var(--ww-main-rgb), 0.4);
   background: transparent;
   cursor: pointer;
   color: inherit;
@@ -443,7 +637,7 @@
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 /* —— Bottom nav (다른 탭과 동일: in-flow, 전체 높이 플렉스 안에서 고정) —— */
@@ -474,11 +668,11 @@
   font-size: 9px;
   font-weight: 400;
   line-height: 1.2;
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-nav-item--active {
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 .mt-nav-icon {

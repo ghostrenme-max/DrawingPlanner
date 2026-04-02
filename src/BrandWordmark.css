@@ -13,11 +13,11 @@
 }
 
 .brand-mark-i {
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 .brand-mark-o {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 /* 화면 배경(#0a0a0a)과 동일 — 자리만 차지하고 보이지 않는 구분 */

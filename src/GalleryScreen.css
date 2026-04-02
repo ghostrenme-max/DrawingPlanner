@@ -48,7 +48,7 @@
   font-size: 17px;
   font-weight: 700;
   line-height: 1.35;
-  color: #fb923c;
+  color: var(--ww-main);
   letter-spacing: -0.02em;
 }
 
@@ -59,7 +59,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.55;
-  color: rgba(251, 146, 60, 0.88);
+  color: rgba(var(--ww-main-rgb), 0.88);
   text-align: center;
   text-wrap: balance;
 }
@@ -73,7 +73,7 @@
   font-family: 'DM Mono', monospace;
   font-size: 13px;
   font-weight: 600;
-  color: #fb923c;
+  color: var(--ww-main);
   letter-spacing: 0.06em;
   margin-bottom: 10px;
 }
@@ -84,13 +84,27 @@
   gap: 6px;
 }
 
-.gallery-cell {
+.gallery-cell-shell {
   position: relative;
   aspect-ratio: 1;
   width: 100%;
   border-radius: 10px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.gallery-cell-shell .gallery-cell--photo {
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: transparent;
 }
 
 .gallery-cell--photo {
@@ -106,7 +120,7 @@
 }
 
 .gallery-cell--photo:focus-visible {
-  outline: 2px solid #fb923c;
+  outline: 2px solid var(--ww-main);
   outline-offset: 2px;
 }
 
@@ -141,6 +155,57 @@
   line-height: 1.2;
 }
 
+/* 테스트용: 호버 시 우측 상단 삭제 */
+.gallery-cell-remove-test {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.62);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gallery-cell-shell:hover .gallery-cell-remove-test,
+.gallery-cell-shell:focus-within .gallery-cell-remove-test {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gallery-cell-remove-test:hover {
+  background: rgba(220, 38, 38, 0.88);
+  transform: scale(1.05);
+}
+
+.gallery-cell-remove-test:active {
+  transform: scale(0.96);
+}
+
+.gallery-cell-remove-test:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid var(--ww-main);
+  outline-offset: 2px;
+}
+
 .gallery-nav {
   flex-shrink: 0;
   display: flex;
@@ -168,11 +233,11 @@
   font-size: 9px;
   font-weight: 400;
   line-height: 1.2;
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .gallery-nav-item--active {
-  color: #fb923c;
+  color: var(--ww-main);
 }
 
 .gallery-nav-icon {
@@ -227,7 +292,7 @@
 }
 
 .gallery-lightbox-close:focus-visible {
-  outline: 2px solid #fb923c;
+  outline: 2px solid var(--ww-main);
   outline-offset: 2px;
 }
 

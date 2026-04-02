@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
 import './GalleryScreen.css'
 
@@ -38,9 +39,16 @@ function formatCellStamp({ d, includeTime }) {
  * @param {{
  *   galleryItems: GalleryItem[]
  *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
+ *   onRemoveGalleryImage?: (itemId: string, imageIndex: number) => void
+ *   features?: import('./appFeatures.js').AppFeatures
  * }} props
  */
-export default function GalleryScreen({ galleryItems, onTabChange }) {
+export default function GalleryScreen({
+  galleryItems,
+  onTabChange,
+  onRemoveGalleryImage,
+  features = DEFAULT_APP_FEATURES,
+}) {
   const [lightboxSrc, setLightboxSrc] = useState(/** @type {string | null} */ (null))
 
   useEffect(() => {
@@ -107,18 +115,33 @@ export default function GalleryScreen({ galleryItems, onTabChange }) {
               <div className="gallery-grid">
                 {byMonth[monthKey].flatMap((item) =>
                   item.images.map((src, i) => (
-                    <button
-                      key={`${item.id}-${i}`}
-                      type="button"
-                      className="gallery-cell gallery-cell--photo"
-                      onClick={() => setLightboxSrc(src)}
-                      aria-label="전체 화면으로 보기"
-                    >
-                      <img src={src} alt="" className="gallery-cell-img" draggable={false} />
-                      <span className="gallery-cell-stamp">
-                        {formatCellStamp(galleryItemMoment(item))}
-                      </span>
-                    </button>
+                    <div key={`${item.id}-${i}`} className="gallery-cell-shell">
+                      <button
+                        type="button"
+                        className="gallery-cell gallery-cell--photo"
+                        onClick={() => setLightboxSrc(src)}
+                        aria-label="전체 화면으로 보기"
+                      >
+                        <img src={src} alt="" className="gallery-cell-img" draggable={false} />
+                        <span className="gallery-cell-stamp">
+                          {formatCellStamp(galleryItemMoment(item))}
+                        </span>
+                      </button>
+                      {onRemoveGalleryImage ? (
+                        <button
+                          type="button"
+                          className="gallery-cell-remove-test"
+                          aria-label="이미지 삭제(테스트)"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onRemoveGalleryImage(item.id, i)
+                          }}
+                        >
+                          ✕
+                        </button>
+                      ) : null}
+                    </div>
                   )),
                 )}
               </div>
@@ -132,10 +155,12 @@ export default function GalleryScreen({ galleryItems, onTabChange }) {
           <span className="gallery-nav-icon" aria-hidden />
           트래커
         </button>
-        <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('goal')}>
-          <span className="gallery-nav-icon" aria-hidden />
-          목표
-        </button>
+        {features.goalScreen ? (
+          <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('goal')}>
+            <span className="gallery-nav-icon" aria-hidden />
+            목표
+          </button>
+        ) : null}
         <button type="button" className="gallery-nav-item gallery-nav-item--active">
           <span className="gallery-nav-icon" aria-hidden />
           갤러리
