@@ -17,6 +17,14 @@ import './App.css'
 const GOAL_1Y_WELCOME_DONE_KEY = 'worthwith_goal_1y_welcome_done_v2'
 const LEGACY_GOAL_WELCOME_DONE_KEY = 'worthwith_goal_1y_welcome_done'
 
+/**
+ * 임시 테스트: `true`면 localStorage 무시·main 진입 시 LS 동기화 안 함 → 새로고침·프리뷰(Cursor) 재실행마다
+ * 1years goals 팝업이 뜸.
+ * 되돌리기: `false`로 바꾸면 앱 첫 실행(또는 LS 완료 플래그 없음)에만 뜨는 기존 동작. 예전에 테스트 중 LS에
+ * `worthwith_goal_1y_welcome_done_v2`가 남아 있으면 팝업이 안 뜰 수 있음 → 설정 전체 초기화 또는 해당 키 삭제.
+ */
+const GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD = true
+
 const LEGACY_GOAL_STRIP_KEYS = [
   'worthwith_goal_1y_main_strip_v2',
   'worthwith_goal_1y_main_strip',
@@ -276,15 +284,18 @@ function App() {
   const [goal1yMainStrip, setGoal1yMainStrip] = useState(
     /** @type {'tip' | 'sample' | 'hidden'} */ ('tip'),
   )
-  const [goalWelcomeVisible, setGoalWelcomeVisible] = useState(readGoalWelcomeShouldShow)
+  const [goalWelcomeVisible, setGoalWelcomeVisible] = useState(() =>
+    GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD ? true : readGoalWelcomeShouldShow(),
+  )
   const hadGoal1yTextRef = useRef(!!(goalTexts['1y'] ?? '').trim())
 
   useEffect(() => {
     clearLegacyGoalStripKeys()
   }, [])
 
-  /** 스플래시 후 main 진입 시마다 LS 기준으로 팝업 표시 동기화(초기 state·Strict Mode 꼬임 방지) */
+  /** 스플래시 후 main 진입 시마다 LS 기준으로 팝업 표시 동기화(초기 state·Strict Mode 꼬임 방지). 테스트 모드에선 비활성. */
   useLayoutEffect(() => {
+    if (GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD) return
     if (screen !== 'main') return
     setGoalWelcomeVisible(readGoalWelcomeShouldShow())
   }, [screen])
@@ -303,10 +314,12 @@ function App() {
   }, [])
 
   const dismissGoalWelcome = useCallback(() => {
-    try {
-      window.localStorage.setItem(GOAL_1Y_WELCOME_DONE_KEY, '1')
-    } catch {
-      /* ignore */
+    if (!GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD) {
+      try {
+        window.localStorage.setItem(GOAL_1Y_WELCOME_DONE_KEY, '1')
+      } catch {
+        /* ignore */
+      }
     }
     setGoalWelcomeVisible(false)
   }, [])
@@ -336,11 +349,13 @@ function App() {
     setGoalTexts(createEmptyGoalTexts())
     setGoalStartDate('')
     clearLegacyGoalStripKeys()
-    try {
-      window.localStorage.removeItem(GOAL_1Y_WELCOME_DONE_KEY)
-      window.localStorage.removeItem(LEGACY_GOAL_WELCOME_DONE_KEY)
-    } catch {
-      /* ignore */
+    if (!GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD) {
+      try {
+        window.localStorage.removeItem(GOAL_1Y_WELCOME_DONE_KEY)
+        window.localStorage.removeItem(LEGACY_GOAL_WELCOME_DONE_KEY)
+      } catch {
+        /* ignore */
+      }
     }
     setGoalWelcomeVisible(true)
     setGoal1yMainStrip('tip')
