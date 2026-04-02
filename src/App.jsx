@@ -250,6 +250,23 @@ function App() {
   const [galleryItems, setGalleryItems] = useState(
     /** @type {Array<{ id: string; images: { url: string; date: string }[]; grouped: boolean; finalImageIndex: number; month: string; createdAt: number }>} */ ([]),
   )
+  /** 갤러리 이미지 고정: `itemId::imageIndex` (최대 3개) */
+  const [galleryPinnedKeys, setGalleryPinnedKeys] = useState(/** @type {string[]} */ ([]))
+
+  const toggleGalleryPin = useCallback((pinKey) => {
+    setGalleryPinnedKeys((prev) => {
+      if (prev.includes(pinKey)) return prev.filter((k) => k !== pinKey)
+      /* 상한은 GalleryScreen.jsx MAX_GALLERY_PINS 과 동일 */
+      if (prev.length >= 3) return prev
+      return [...prev, pinKey]
+    })
+  }, [])
+
+  const pruneGalleryPinsForItemIds = useCallback((itemIds) => {
+    const remove = new Set(itemIds)
+    setGalleryPinnedKeys((prev) => prev.filter((k) => !remove.has(k.split('::')[0])))
+  }, [])
+
   const [appFeatures, setAppFeatures] = useState(() => ({ ...DEFAULT_APP_FEATURES }))
   const [themeIndex, setThemeIndex] = useState(DEFAULT_THEME_INDEX)
 
@@ -284,6 +301,7 @@ function App() {
       revokeGalleryBlobUrls(prev)
       return []
     })
+    setGalleryPinnedKeys([])
   }, [])
 
   const [goalTexts, setGoalTexts] = useState(() => createEmptyGoalTexts())
@@ -367,6 +385,7 @@ function App() {
     setGoalWelcomeVisible(true)
     setGoal1yMainStrip('tip')
     hadGoal1yTextRef.current = false
+    setGalleryPinnedKeys([])
   }, [])
 
   /** 갤러리 테스트용: 이미지 한 장 삭제(blob URL 정리 포함) */
@@ -487,6 +506,9 @@ function App() {
             onTabChange={handleAppNav}
             onRemoveGalleryImage={onRemoveGalleryImage}
             features={appFeatures}
+            galleryPinnedKeys={galleryPinnedKeys}
+            onToggleGalleryPin={toggleGalleryPin}
+            onPruneGalleryPinsForItemIds={pruneGalleryPinsForItemIds}
           />
         ) : screen === 'setting' ? (
           <SettingScreen

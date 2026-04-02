@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
 import './GalleryScreen.css'
+
+const MAX_GALLERY_PINS = 3
+const PIN_LIMIT_TOAST_VISIBLE_MS = 2600
+const PIN_LIMIT_TOAST_TRANSITION_MS = 380
 
 const MARK_PATH =
   'M102.5,285.4c0,0,13,30,43,20s40-90,70-85s34,65,64,50c30-15,58-105,118-147'
@@ -22,6 +26,44 @@ function ReferenceFolderIcon({ className = '' }) {
       <path d="M4 8.25v9.5A1.75 1.75 0 005.75 19.5h12.5a1.75 1.75 0 001.75-1.75v-7.5a1.75 1.75 0 00-1.75-1.75H4z" />
     </svg>
   )
+}
+
+function PinIcon({ className = '' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width={22}
+      height={22}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.5V4a1 1 0 011-1h4a1 1 0 011 1v6.5" />
+      <path d="M7 10.5h10l-1.2 6H8.2L7 10.5z" />
+    </svg>
+  )
+}
+
+/** 카드 썸네일 좌상단 고정 표시 */
+function GalleryPinCornerBadge({ small = false }) {
+  return (
+    <span
+      className={`gallery-card-pin-corner${small ? ' gallery-card-pin-corner--small' : ''}`}
+      aria-hidden
+    >
+      <PinIcon className="gallery-card-pin-corner-icon" />
+    </span>
+  )
+}
+
+/** @param {string} itemId @param {number} imageIndex */
+function galleryImagePinKey(itemId, imageIndex) {
+  return `${itemId}::${imageIndex}`
 }
 
 function GalleryLogoMark() {
@@ -155,6 +197,9 @@ function mergeTwoItemsById(items, sourceId, targetId) {
  *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
  *   onRemoveGalleryImage?: (itemId: string, imageIndex: number) => void
  *   features?: import('./appFeatures.js').AppFeatures
+ *   galleryPinnedKeys?: string[]
+ *   onToggleGalleryPin?: (pinKey: string) => void
+ *   onPruneGalleryPinsForItemIds?: (itemIds: string[]) => void
  * }} props
  */
 export default function GalleryScreen({
@@ -163,8 +208,19 @@ export default function GalleryScreen({
   onTabChange,
   onRemoveGalleryImage,
   features = DEFAULT_APP_FEATURES,
+  galleryPinnedKeys = [],
+  onToggleGalleryPin,
+  onPruneGalleryPinsForItemIds,
 }) {
-  const [lightboxSrc, setLightboxSrc] = useState(/** @type {string | null} */ (null))
+  const [lightbox, setLightbox] = useState(
+    /** @type {{ src: string; itemId: string; imageIndex: number } | null} */ (null),
+  )
+
+  const openLightbox = useCallback((src, itemId, imageIndex) => {
+    setLightbox({ src, itemId, imageIndex })
+  }, [])
+
+  const closeLightbox = useCallback(() => setLightbox(null), [])
   const [draggingId, setDraggingId] = useState(/** @type {string | null} */ (null))
   const [dropTargetId, setDropTargetId] = useState(/** @type {string | null} */ (null))
   /** 월별 갤러리 필터: 전체 | 일반(미묶음) | 과정(묶음) */
@@ -193,6 +249,8 @@ export default function GalleryScreen({
 
   const monthKeys = useMemo(() => Object.keys(byMonth).sort().reverse(), [byMonth])
 
+  const pinnedKeySet = useMemo(() => new Set(galleryPinnedKeys), [galleryPinnedKeys])
+
   const endDrag = useCallback(() => {
     setDraggingId(null)
     setDropTargetId(null)
@@ -200,38 +258,116 @@ export default function GalleryScreen({
 
   const handleDropMerge = useCallback(
     (sourceId, targetId) => {
+      onPruneGalleryPinsForItemIds?.([sourceId, targetId])
       const next = mergeTwoItemsById(items, sourceId, targetId)
       onGalleryItemsChange(next.map((it) => ({ ...it })))
       endDrag()
     },
-    [items, onGalleryItemsChange, endDrag],
+    [items, onGalleryItemsChange, endDrag, onPruneGalleryPinsForItemIds],
   )
 
   useEffect(() => {
-    if (!lightboxSrc) return
+    if (!lightbox) return
     const onKey = (e) => {
-      if (e.key === 'Escape') setLightboxSrc(null)
+      if (e.key === 'Escape') closeLightbox()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lightboxSrc])
+  }, [lightbox, closeLightbox])
 
+  const lightboxPinKey =
+    lightbox != null ? galleryImagePinKey(lightbox.itemId, lightbox.imageIndex) : ''
+  const lightboxPinned = lightboxPinKey !== '' && galleryPinnedKeys.includes(lightboxPinKey)
+
+  const [pinLimitToastOpen, setPinLimitToastOpen] = useState(false)
+  const [pinLimitToastIn, setPinLimitToastIn] = useState(false)
+  const pinLimitToastOpenRef = useRef(false)
+  pinLimitToastOpenRef.current = pinLimitToastOpen
+  const pinLimitToastTimersRef = useRef(
+    /** @type {{ show: ReturnType<typeof setTimeout> | null; hide: ReturnType<typeof setTimeout> | null }} */ ({
+      show: null,
+      hide: null,
+    }),
+  )
+
+  const showPinLimitToast = useCallback(() => {
+    const t = pinLimitToastTimersRef.current
+    if (t.show) clearTimeout(t.show)
+    if (t.hide) clearTimeout(t.hide)
+    t.show = null
+    t.hide = null
+
+    if (!pinLimitToastOpenRef.current) {
+      setPinLimitToastOpen(true)
+      setPinLimitToastIn(false)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPinLimitToastIn(true))
+      })
+    } else {
+      setPinLimitToastOpen(true)
+      setPinLimitToastIn(true)
+    }
+
+    t.hide = setTimeout(() => {
+      setPinLimitToastIn(false)
+      t.hide = null
+      t.show = setTimeout(() => {
+        setPinLimitToastOpen(false)
+        t.show = null
+      }, PIN_LIMIT_TOAST_TRANSITION_MS)
+    }, PIN_LIMIT_TOAST_VISIBLE_MS)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      const t = pinLimitToastTimersRef.current
+      if (t.show) clearTimeout(t.show)
+      if (t.hide) clearTimeout(t.hide)
+    }
+  }, [])
+
+  const handleLightboxPinClick = useCallback(() => {
+    if (!onToggleGalleryPin || lightboxPinKey === '') return
+    if (lightboxPinned) {
+      onToggleGalleryPin(lightboxPinKey)
+      return
+    }
+    if (galleryPinnedKeys.length >= MAX_GALLERY_PINS) {
+      showPinLimitToast()
+      return
+    }
+    onToggleGalleryPin(lightboxPinKey)
+  }, [
+    galleryPinnedKeys.length,
+    lightboxPinned,
+    lightboxPinKey,
+    onToggleGalleryPin,
+    showPinLimitToast,
+  ])
+
+  /** 표시할 카드 없음 — galleryItems가 비어 있거나 정규화 후 항목 없음 */
   const isEmpty = items.length === 0
 
   return (
     <div className="gallery-screen">
-      {lightboxSrc ? (
+      {lightbox ? (
         <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label="이미지 전체 보기">
-          <button
-            type="button"
-            className="gallery-lightbox-close"
-            onClick={() => setLightboxSrc(null)}
-            aria-label="닫기"
-          >
-            ✕
-          </button>
+          <div className="gallery-lightbox-toolbar">
+            <button
+              type="button"
+              className={`gallery-lightbox-pin${lightboxPinned ? ' gallery-lightbox-pin--on' : ''}`}
+              aria-pressed={lightboxPinned}
+              aria-label={lightboxPinned ? '고정 해제' : '이미지 고정'}
+              onClick={handleLightboxPinClick}
+            >
+              <PinIcon />
+            </button>
+            <button type="button" className="gallery-lightbox-close" onClick={closeLightbox} aria-label="닫기">
+              ✕
+            </button>
+          </div>
           <div className="gallery-lightbox-scroll">
-            <img src={lightboxSrc} alt="" className="gallery-lightbox-img" draggable={false} />
+            <img src={lightbox.src} alt="" className="gallery-lightbox-img" draggable={false} />
           </div>
         </div>
       ) : null}
@@ -246,12 +382,14 @@ export default function GalleryScreen({
       </header>
 
       <div className="gallery-body">
-        <div className="gallery-scroll">
+        <div className={`gallery-scroll${isEmpty ? ' gallery-scroll--empty' : ''}`}>
           {isEmpty ? (
             <div className="gallery-empty">
               <GalleryLogoMark />
-              <p className="gallery-empty-text">아직 완성작이 없어요</p>
-              <p className="gallery-empty-hint">트래커에서 완성 후 갤러리로 보내기</p>
+              <div className="gallery-empty-lines">
+                <p className="gallery-empty-text">아직 완성작이 없어요</p>
+                <p className="gallery-empty-hint">트래커에서 완성 후 갤러리로 보내기</p>
+              </div>
             </div>
           ) : (
             monthKeys.map((monthKey) => {
@@ -321,11 +459,16 @@ export default function GalleryScreen({
                       onDropMerge={handleDropMerge}
                     >
                       {item.grouped ? (
-                        <GroupedCard item={item} onOpen={(url) => setLightboxSrc(url)} />
+                        <GroupedCard
+                          item={item}
+                          pinnedKeySet={pinnedKeySet}
+                          onOpenImage={(url, imageIndex) => openLightbox(url, item.id, imageIndex)}
+                        />
                       ) : (
                         <SingleGalleryCard
                           item={item}
-                          onOpenLightbox={(url) => setLightboxSrc(url)}
+                          pinnedKeySet={pinnedKeySet}
+                          onOpenLightbox={(url, imageIndex) => openLightbox(url, item.id, imageIndex)}
                           onRemoveGalleryImage={onRemoveGalleryImage}
                         />
                       )}
@@ -360,6 +503,19 @@ export default function GalleryScreen({
           설정
         </button>
       </nav>
+
+      {pinLimitToastOpen ? (
+        <div
+          className={`gallery-pin-limit-toast${pinLimitToastIn ? ' gallery-pin-limit-toast--in' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="gallery-pin-limit-toast-lines">
+            <span className="gallery-pin-limit-toast-line">상단바 고정 팝업</span>
+            <span className="gallery-pin-limit-toast-line">{MAX_GALLERY_PINS}개까지 가능해요</span>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -426,16 +582,18 @@ function DraggableGalleryRow({
  * 대표(완성) + 과정 썸네일 — 사용자가 DnD로 묶은 카드만
  * @param {{
  *   item: NonNullable<ReturnType<typeof normalizeGalleryItem>>
- *   onOpen: (url: string) => void
+ *   onOpenImage: (url: string, imageIndex: number) => void
  *   showFinalBadge?: boolean
  *   shellClassName?: string
+ *   pinnedKeySet?: Set<string>
  * }} props
  */
 function FinalProcessBlock({
   item,
-  onOpen,
+  onOpenImage,
   showFinalBadge = false,
   shellClassName = 'gallery-card-grouped',
+  pinnedKeySet = new Set(),
 }) {
   const final = item.images[item.finalImageIndex]
   const processIdxs = item.images.map((_, i) => i).filter((i) => i !== item.finalImageIndex)
@@ -444,15 +602,19 @@ function FinalProcessBlock({
 
   if (!final) return null
 
+  const isIdxPinned = (idx) => pinnedKeySet.has(galleryImagePinKey(item.id, idx))
+  const finalPinned = isIdxPinned(item.finalImageIndex)
+
   return (
     <div className={shellClassName}>
       <button
         type="button"
-        className="gallery-card-grouped-final"
-        onClick={() => onOpen(final.url)}
+        className={`gallery-card-grouped-final${finalPinned ? ' gallery-card-grouped-final--pinned' : ''}`}
+        onClick={() => onOpenImage(final.url, item.finalImageIndex)}
         aria-label={showFinalBadge ? '완성본 크게 보기' : '대표 이미지 크게 보기'}
       >
         <img src={final.url} alt="" className="gallery-card-grouped-final-img" draggable={false} />
+        {finalPinned ? <GalleryPinCornerBadge /> : null}
         {showFinalBadge ? <span className="gallery-badge-final">완성본</span> : null}
         <span className="gallery-card-stamp-bl">{stampFromDate(final)}</span>
       </button>
@@ -465,17 +627,21 @@ function FinalProcessBlock({
                 +{extra}
               </span>
             ) : null}
-            {thumbs.map((idx) => (
-              <button
-                key={idx}
-                type="button"
-                className="gallery-process-thumb"
-                onClick={() => onOpen(item.images[idx].url)}
-                aria-label="과정 샷 보기"
-              >
-                <img src={item.images[idx].url} alt="" draggable={false} />
-              </button>
-            ))}
+            {thumbs.map((idx) => {
+              const thumbPinned = isIdxPinned(idx)
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`gallery-process-thumb${thumbPinned ? ' gallery-process-thumb--pinned' : ''}`}
+                  onClick={() => onOpenImage(item.images[idx].url, idx)}
+                  aria-label="과정 샷 보기"
+                >
+                  {thumbPinned ? <GalleryPinCornerBadge small /> : null}
+                  <img src={item.images[idx].url} alt="" draggable={false} />
+                </button>
+              )
+            })}
           </div>
         </div>
       ) : null}
@@ -486,21 +652,25 @@ function FinalProcessBlock({
 /**
  * @param {{
  *   item: NonNullable<ReturnType<typeof normalizeGalleryItem>>
- *   onOpenLightbox: (url: string) => void
+ *   pinnedKeySet?: Set<string>
+ *   onOpenLightbox: (url: string, imageIndex: number) => void
  *   onRemoveGalleryImage?: (itemId: string, imageIndex: number) => void
  * }} props
  */
-function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage }) {
-  const hero = item.images[item.finalImageIndex] ?? item.images[0]
+function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage, pinnedKeySet = new Set() }) {
+  const heroIdx = item.images[item.finalImageIndex] != null ? item.finalImageIndex : 0
+  const hero = item.images[heroIdx]
+  const heroPinned = pinnedKeySet.has(galleryImagePinKey(item.id, heroIdx))
 
   return (
     <div className="gallery-card-single-outer">
       <button
         type="button"
-        className="gallery-card-single"
-        onClick={() => onOpenLightbox(hero.url)}
+        className={`gallery-card-single${heroPinned ? ' gallery-card-single--pinned' : ''}`}
+        onClick={() => onOpenLightbox(hero.url, heroIdx)}
         onContextMenu={(e) => e.preventDefault()}
       >
+        {heroPinned ? <GalleryPinCornerBadge /> : null}
         <img src={hero.url} alt="" className="gallery-card-single-img" draggable={false} />
         <span className="gallery-card-stamp-br">{stampFromDate(hero)}</span>
       </button>
@@ -524,11 +694,18 @@ function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage }) {
 /**
  * @param {{
  *   item: NonNullable<ReturnType<typeof normalizeGalleryItem>>
- *   onOpen: (url: string) => void
+ *   pinnedKeySet?: Set<string>
+ *   onOpenImage: (url: string, imageIndex: number) => void
  * }} props
  */
-function GroupedCard({ item, onOpen }) {
+function GroupedCard({ item, onOpenImage, pinnedKeySet }) {
   return (
-    <FinalProcessBlock item={item} onOpen={onOpen} showFinalBadge shellClassName="gallery-card-grouped" />
+    <FinalProcessBlock
+      item={item}
+      pinnedKeySet={pinnedKeySet}
+      onOpenImage={onOpenImage}
+      showFinalBadge
+      shellClassName="gallery-card-grouped"
+    />
   )
 }
