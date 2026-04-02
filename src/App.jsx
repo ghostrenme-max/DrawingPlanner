@@ -186,6 +186,8 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 
 function App() {
   const [screen, setScreen] = useState(/** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting'} */ ('splash'))
+  /** 트래커 탭(재)진입마다 증가 → 상단 진행 바·% 애니 재생 */
+  const [trackerBarReplayKey, setTrackerBarReplayKey] = useState(0)
   const [galleryItems, setGalleryItems] = useState(
     /** @type {{ id: string; title: string; month: string; images: string[]; date: string }[]} */ ([]),
   )
@@ -193,8 +195,12 @@ function App() {
   const handleAppNav = useCallback(
     /** @param {'tracker' | 'goal' | 'gallery' | 'settings'} tab */
     (tab) => {
-      if (tab === 'tracker') setScreen('main')
-      else if (tab === 'goal') setScreen('goal')
+      if (tab === 'tracker') {
+        setScreen('main')
+        setTrackerBarReplayKey((k) => k + 1)
+        return
+      }
+      if (tab === 'goal') setScreen('goal')
       else if (tab === 'gallery') setScreen('gallery')
       else if (tab === 'settings') setScreen('setting')
     },
@@ -281,7 +287,11 @@ function App() {
         ) : screen === 'setting' ? (
           <SettingScreen onTabChange={handleAppNav} />
         ) : (
-          <MainTracker onTabChange={handleAppNav} onAddGalleryItem={onAddGalleryItem} />
+          <MainTracker
+            onTabChange={handleAppNav}
+            onAddGalleryItem={onAddGalleryItem}
+            trackerBarReplayKey={trackerBarReplayKey}
+          />
         )}
         </div>
       </div>

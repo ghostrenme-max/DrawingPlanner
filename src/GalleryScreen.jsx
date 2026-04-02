@@ -1,10 +1,38 @@
+import { useEffect, useState } from 'react'
 import BrandWordmark from './BrandWordmark'
-import PlusIcon from './PlusIcon'
 import './GalleryScreen.css'
 
 /**
- * @typedef {{ id: string; title: string; month: string; images: string[]; date: string }} GalleryItem
+ * @typedef {{ id: string; title: string; month: string; images: string[]; date: string; dateTime?: string; uploadedAt?: number }} GalleryItem
  */
+
+/** 업로드 순간(로컬 표시용). uploadedAt(ms) → Date.getHours 등이 기기 현재 시간대 기준. */
+function galleryItemMoment(item) {
+  const ts = item.uploadedAt
+  if (ts != null && Number.isFinite(Number(ts))) {
+    return { d: new Date(Number(ts)), includeTime: true }
+  }
+  if (item.dateTime) {
+    const d = new Date(item.dateTime)
+    if (!Number.isNaN(d.getTime())) return { d, includeTime: true }
+  }
+  if (item.date) {
+    const [y, m, day] = item.date.split('-').map(Number)
+    if (y && m && day) return { d: new Date(y, m - 1, day), includeTime: false }
+  }
+  const d = new Date()
+  return { d, includeTime: true }
+}
+
+/** 시각 있음: 04.02 14:30 (로컬). 날짜만 있으면 04.02 (자정 00:00 오표시 방지). */
+function formatCellStamp({ d, includeTime }) {
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  if (!includeTime) return `${mm}.${dd}`
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${mm}.${dd} ${hh}:${mi}`
+}
 
 /**
  * @param {{
@@ -13,6 +41,17 @@ import './GalleryScreen.css'
  * }} props
  */
 export default function GalleryScreen({ galleryItems, onTabChange }) {
+  const [lightboxSrc, setLightboxSrc] = useState(/** @type {string | null} */ (null))
+
+  useEffect(() => {
+    if (!lightboxSrc) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLightboxSrc(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxSrc])
+
   const byMonth = galleryItems.reduce((acc, item) => {
     const m = item.month
     if (!acc[m]) acc[m] = []
@@ -24,25 +63,42 @@ export default function GalleryScreen({ galleryItems, onTabChange }) {
 
   const formatMonthLabel = (key) => {
     const [y, mo] = key.split('-')
-    return `${y} · ${mo}`
+    return `${y}.${mo}`
   }
 
   return (
     <div className="gallery-screen">
+      {lightboxSrc ? (
+        <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label="이미지 전체 보기">
+          <button
+            type="button"
+            className="gallery-lightbox-close"
+            onClick={() => setLightboxSrc(null)}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+          <div className="gallery-lightbox-scroll">
+            <img src={lightboxSrc} alt="" className="gallery-lightbox-img" draggable={false} />
+          </div>
+        </div>
+      ) : null}
+
       <header className="gallery-header">
         <div className="gallery-header-brand">
           <BrandWordmark />
-          <div className="gallery-subtitle">갤러리</div>
         </div>
       </header>
 
       <div className="gallery-scroll">
         {galleryItems.length === 0 ? (
           <div className="gallery-empty">
-            <div className="gallery-empty-tile" aria-hidden>
-              <PlusIcon className="gallery-empty-plus" />
-            </div>
             <p className="gallery-empty-text">아직 완성작이 없어요</p>
+            <p className="gallery-empty-hint">
+              트래커에서 &quot;완성했어요 — 갤러리에 담기&quot;로
+              <br />
+              보낸 작업만 여기에 모여요.
+            </p>
           </div>
         ) : (
           monthKeys.map((monthKey) => (
@@ -51,14 +107,20 @@ export default function GalleryScreen({ galleryItems, onTabChange }) {
               <div className="gallery-grid">
                 {byMonth[monthKey].flatMap((item) =>
                   item.images.map((src, i) => (
-                    <div key={`${item.id}-${i}`} className="gallery-cell">
-                      <img src={src} alt="" className="gallery-cell-img" />
-                    </div>
+                    <button
+                      key={`${item.id}-${i}`}
+                      type="button"
+                      className="gallery-cell gallery-cell--photo"
+                      onClick={() => setLightboxSrc(src)}
+                      aria-label="전체 화면으로 보기"
+                    >
+                      <img src={src} alt="" className="gallery-cell-img" draggable={false} />
+                      <span className="gallery-cell-stamp">
+                        {formatCellStamp(galleryItemMoment(item))}
+                      </span>
+                    </button>
                   )),
                 )}
-                <div className="gallery-cell gallery-cell--placeholder" aria-hidden>
-                  <PlusIcon className="gallery-placeholder-plus" />
-                </div>
               </div>
             </section>
           ))

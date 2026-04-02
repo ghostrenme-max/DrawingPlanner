@@ -206,15 +206,16 @@
 
 .goal-progress-label {
   font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-  font-size: 8px;
+  font-size: 12px;
   color: #2dd4bf;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .goal-progress-pct {
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: 14px;
   color: #2dd4bf;
+  font-variant-numeric: tabular-nums;
 }
 
 .goal-progress-track {
@@ -224,12 +225,25 @@
   overflow: hidden;
 }
 
+/* transition duration은 GoalScreen.jsx GOAL_HEADER_BAR_MS(980)와 동기 — 트래커 mt-bar-fill과 동일 */
 .goal-progress-fill {
   height: 100%;
+  max-width: 100%;
   border-radius: 3px;
   background: #2dd4bf;
   width: 0;
   min-width: 0;
+  transition: width 980ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.goal-progress-fill--active {
+  width: var(--goal-progress-target-pct, 0%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-progress-fill {
+    transition-duration: 0.01ms;
+  }
 }
 
 .goal-scroll {
@@ -398,6 +412,43 @@
   font-size: 10px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.7);
+  display: inline-block;
+  transform-origin: 0 50%;
+  transition:
+    color 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    text-shadow 0.5s ease;
+}
+
+.goal-task-name--full {
+  color: #fb923c;
+  text-shadow: 0 0 6px rgba(251, 146, 60, 0.32);
+  animation: goal-task-name-full-fx 0.88s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+}
+
+@keyframes goal-task-name-full-fx {
+  0% {
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 0 0 0 transparent;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  38% {
+    color: #fdba74;
+    text-shadow: 0 0 16px rgba(251, 146, 60, 0.55);
+    transform: scale(1.05);
+    filter: brightness(1.06);
+  }
+  72% {
+    color: #fb923c;
+    text-shadow: 0 0 10px rgba(251, 146, 60, 0.4);
+    transform: scale(1.01);
+  }
+  100% {
+    color: #fb923c;
+    text-shadow: 0 0 6px rgba(251, 146, 60, 0.32);
+    transform: scale(1);
+    filter: brightness(1);
+  }
 }
 
 .goal-task-dots {
@@ -411,10 +462,53 @@
   height: 6px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  transform: scale(1);
 }
 
 .goal-task-dot--on {
   background: #fb923c;
+}
+
+/* 켜진 도트: 행·순서별 delay는 JS inline animationDelay */
+.goal-task-dot--on.goal-task-dot--animate {
+  animation: goal-task-dot-fill-bounce 0.58s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+
+@keyframes goal-task-dot-fill-bounce {
+  0% {
+    transform: scale(0.4);
+    background: rgba(251, 146, 60, 0.2);
+    box-shadow: 0 0 0 0 rgba(251, 146, 60, 0);
+  }
+  42% {
+    transform: scale(1.28);
+    background: #fb923c;
+    box-shadow: 0 0 5px rgba(251, 146, 60, 0.5);
+  }
+  68% {
+    transform: scale(0.9);
+    box-shadow: 0 0 2px rgba(251, 146, 60, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    background: #fb923c;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-task-dot--on.goal-task-dot--animate {
+    animation: none;
+    transform: scale(1);
+    background: #fb923c;
+    box-shadow: none;
+  }
+
+  .goal-task-name--full {
+    animation: none;
+    text-shadow: none;
+  }
 }
 
 .goal-nav {

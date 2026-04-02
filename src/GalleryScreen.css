@@ -1,4 +1,5 @@
 .gallery-screen {
+  position: relative;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -18,14 +19,6 @@
   gap: 4px;
 }
 
-.gallery-subtitle {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.2);
-}
-
 .gallery-scroll {
   flex: 1;
   min-height: 0;
@@ -33,53 +26,55 @@
   padding: 0 18px 16px;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
 }
 
 .gallery-empty {
-  min-height: 220px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 40px 16px;
-}
-
-.gallery-empty-tile {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gallery-empty-plus {
-  width: 22px;
-  height: 22px;
-  color: rgba(255, 255, 255, 0.15);
+  gap: 18px;
+  padding: 32px 22px;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .gallery-empty-text {
   margin: 0;
-  font-family: 'DM Mono', monospace;
+  font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #fb923c;
+  letter-spacing: -0.02em;
+}
+
+.gallery-empty-hint {
+  margin: 0;
+  max-width: 272px;
+  font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  line-height: 1.55;
+  color: rgba(251, 146, 60, 0.88);
   text-align: center;
+  text-wrap: balance;
 }
 
 .gallery-month-block {
+  flex-shrink: 0;
   margin-bottom: 20px;
 }
 
 .gallery-month-label {
   font-family: 'DM Mono', monospace;
-  font-size: 8px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.2);
-  letter-spacing: 0.14em;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fb923c;
+  letter-spacing: 0.06em;
   margin-bottom: 10px;
 }
 
@@ -92,23 +87,36 @@
 .gallery-cell {
   position: relative;
   aspect-ratio: 1;
+  width: 100%;
   border-radius: 10px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
 }
 
-.gallery-cell--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+.gallery-cell--photo {
+  display: block;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
 }
 
-.gallery-placeholder-plus {
-  width: 18px;
-  height: 18px;
-  color: rgba(255, 255, 255, 0.15);
+.gallery-cell--photo:focus-visible {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+}
+
+.gallery-cell--photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 42%);
 }
 
 .gallery-cell-img {
@@ -116,6 +124,21 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.gallery-cell-stamp {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  z-index: 1;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  line-height: 1.2;
 }
 
 .gallery-nav {
@@ -162,4 +185,77 @@
 
 .gallery-nav-item--active .gallery-nav-icon {
   opacity: 1;
+}
+
+/* —— 전체 화면 라이트박스 (모바일 갤러리처럼 화면에 맞춤, 비율 유지) —— */
+.gallery-lightbox {
+  position: absolute;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.94);
+}
+
+.gallery-lightbox-close {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: system-ui, sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gallery-lightbox-close:active {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.gallery-lightbox-close:focus-visible {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+}
+
+.gallery-lightbox-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: calc(52px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.gallery-lightbox-img {
+  display: block;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  image-rendering: auto;
+  user-select: none;
+  -webkit-user-drag: none;
 }
