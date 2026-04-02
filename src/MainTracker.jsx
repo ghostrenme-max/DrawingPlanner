@@ -277,16 +277,18 @@ function MainTracker({
     const urls = cardImages[card.id] || []
     if (urls.length === 0 || !onAddGalleryItem) return
     const now = new Date()
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-    const date = now.toISOString().slice(0, 10)
-    onAddGalleryItem({
-      id: `${card.id}-${Date.now()}`,
-      title: card.title,
-      month,
-      images: [...urls],
-      date,
-      dateTime: now.toISOString(),
-      uploadedAt: now.getTime(),
+    const iso = now.toISOString()
+    const month = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`
+    const base = now.getTime()
+    urls.forEach((url, i) => {
+      onAddGalleryItem({
+        id: `${card.id}-${base}-${i}`,
+        month,
+        images: [{ url, date: iso }],
+        grouped: false,
+        finalImageIndex: 0,
+        createdAt: base + i,
+      })
     })
     setCardImages((prev) => ({ ...prev, [card.id]: [] }))
     openGallerySentDialog()

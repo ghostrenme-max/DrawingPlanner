@@ -49,10 +49,17 @@ function readGoalWelcomeShouldShow() {
   }
 }
 
+function galleryEntryUrl(entry) {
+  if (typeof entry === 'string') return entry
+  if (entry && typeof entry.url === 'string') return entry.url
+  return ''
+}
+
 function revokeGalleryBlobUrls(items) {
   for (const it of items) {
-    for (const url of it.images) {
-      if (typeof url === 'string' && url.startsWith('blob:')) {
+    for (const ent of it.images ?? []) {
+      const url = galleryEntryUrl(ent)
+      if (url.startsWith('blob:')) {
         try {
           URL.revokeObjectURL(url)
         } catch {
@@ -241,7 +248,7 @@ function App() {
   /** 트래커 탭(재)진입마다 증가 → 상단 진행 바·% 애니 재생 */
   const [trackerBarReplayKey, setTrackerBarReplayKey] = useState(0)
   const [galleryItems, setGalleryItems] = useState(
-    /** @type {{ id: string; title: string; month: string; images: string[]; date: string }[]} */ ([]),
+    /** @type {Array<{ id: string; images: { url: string; date: string }[]; grouped: boolean; finalImageIndex: number; month: string; createdAt: number }>} */ ([]),
   )
   const [appFeatures, setAppFeatures] = useState(() => ({ ...DEFAULT_APP_FEATURES }))
   const [themeIndex, setThemeIndex] = useState(DEFAULT_THEME_INDEX)
@@ -362,14 +369,15 @@ function App() {
     hadGoal1yTextRef.current = false
   }, [])
 
-  /** 갤러리 테스트용: 썸네일 삭제(blob URL 정리 포함) */
+  /** 갤러리 테스트용: 이미지 한 장 삭제(blob URL 정리 포함) */
   const onRemoveGalleryImage = useCallback((itemId, imageIndex) => {
     setGalleryItems((prev) =>
       prev
         .map((it) => {
           if (it.id !== itemId) return it
-          const url = it.images[imageIndex]
-          if (typeof url === 'string' && url.startsWith('blob:')) {
+          const ent = it.images[imageIndex]
+          const url = galleryEntryUrl(ent)
+          if (url.startsWith('blob:')) {
             try {
               URL.revokeObjectURL(url)
             } catch {
@@ -378,7 +386,16 @@ function App() {
           }
           const nextImages = it.images.filter((_, idx) => idx !== imageIndex)
           if (nextImages.length === 0) return null
-          return { ...it, images: nextImages }
+          let fi = it.finalImageIndex ?? 0
+          if (imageIndex < fi) fi = Math.max(0, fi - 1)
+          else if (imageIndex === fi) fi = Math.min(fi, nextImages.length - 1)
+          const grouped = it.grouped === true && nextImages.length > 1
+          return {
+            ...it,
+            images: nextImages,
+            finalImageIndex: fi,
+            grouped,
+          }
         })
         .filter((x) => x != null),
     )
@@ -466,6 +483,7 @@ function App() {
         ) : screen === 'gallery' ? (
           <GalleryScreen
             galleryItems={galleryItems}
+            onGalleryItemsChange={setGalleryItems}
             onTabChange={handleAppNav}
             onRemoveGalleryImage={onRemoveGalleryImage}
             features={appFeatures}
