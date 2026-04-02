@@ -38,7 +38,7 @@
   }
 }
 
-/* 같이: 시작은 크게 벌림 → 1.25s ease-in-out 로 천천히 모임(변화 폭 크게) */
+/* 같이: 시작은 크게 벌림 → ~0.85s ease-in-out 로 모임 */
 @keyframes splash-gati-tighten {
   from {
     letter-spacing: 18px;
@@ -59,31 +59,51 @@
 }
 
 .device-stage {
-  min-height: 100vh;
-  min-height: 100dvh;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   margin: 0;
   background-color: #0d0d0d;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: stretch;
   box-sizing: border-box;
 }
 
 .device-frame {
-  width: 390px;
-  height: 844px;
-  background-color: #17161a;
+  width: 100%;
+  max-width: 390px;
+  height: 100%;
+  min-height: 0;
+  background-color: #0a0a0a;
   border-radius: 48px;
   overflow: hidden;
   position: relative;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* 메인·목표·갤러리·설정이 동일 높이로 꽉 채움 */
+.device-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+}
+
+.device-shell > * {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .splash {
   position: relative;
-  width: 100%;
-  height: 100%;
   margin: 0;
   background-color: #17161a;
   box-sizing: border-box;
@@ -216,8 +236,9 @@
 }
 
 .splash-center--sync .splash-sync-i .splash-tagline-gati-tighten {
-  animation: splash-gati-tighten var(--splash-gati-spread-ms, 1250ms) ease-in-out forwards;
-  animation-delay: var(--splash-sync-i-delay);
+  animation: splash-gati-tighten var(--splash-gati-spread-ms, 850ms) ease-in-out forwards;
+  /* i 타이밍 + 페이드 끝 + --splash-gati-hold 는 JS에서 합산해 --splash-gati-tighten-delay 로 전달 */
+  animation-delay: var(--splash-gati-tighten-delay, var(--splash-sync-i-delay));
   animation-fill-mode: both;
 }
 

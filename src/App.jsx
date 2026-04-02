@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import GalleryScreen from './GalleryScreen.jsx'
+import GoalScreen from './GoalScreen.jsx'
 import MainTracker from './MainTracker.jsx'
+import SettingScreen from './SettingScreen.jsx'
 import './App.css'
 
 /** `logo/worthwith.svg` W 곡선 (viewBox 0 0 500 500) */
@@ -19,7 +22,10 @@ const SPLASH_SEQUENCE_START_MS = 500
 const SPLASH_POP_MS = 300
 
 /** 「같이」 자간이 모이는 구간 길이(충분히 보이게) */
-const SPLASH_GATI_SPREAD_MS = 1250
+const SPLASH_GATI_SPREAD_MS = 850
+
+/** i·같이 페이드 완료 후, 벌어진 자간(18px)을 유지한 뒤 모이기 시작까지 추가 대기 */
+const SPLASH_GATI_HOLD_MS = 480
 
 /** 「가치있게」 자간 펼침 길이 */
 const SPLASH_WORTH_SPREAD_MS = 680
@@ -179,7 +185,28 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState(/** @type {'splash' | 'main'} */ ('splash'))
+  const [screen, setScreen] = useState(/** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting'} */ ('splash'))
+  const [galleryItems, setGalleryItems] = useState(
+    /** @type {{ id: string; title: string; month: string; images: string[]; date: string }[]} */ ([]),
+  )
+
+  const handleAppNav = useCallback(
+    /** @param {'tracker' | 'goal' | 'gallery' | 'settings'} tab */
+    (tab) => {
+      if (tab === 'tracker') setScreen('main')
+      else if (tab === 'goal') setScreen('goal')
+      else if (tab === 'gallery') setScreen('gallery')
+      else if (tab === 'settings') setScreen('setting')
+    },
+    [],
+  )
+
+  const onAddGalleryItem = useCallback(
+    (item) => {
+      setGalleryItems((prev) => [...prev, item])
+    },
+    [],
+  )
   const [splashTiming, setSplashTiming] = useState(null)
 
   const onSplashMeasured = useCallback((raw) => {
@@ -197,45 +224,11 @@ function App() {
   }, [])
 
   return (
-    <div
-      className="device-stage"
-      style={{
-        minHeight: '100dvh',
-        width: '100%',
-        margin: 0,
-        backgroundColor: '#0d0d0d',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxSizing: 'border-box',
-      }}
-    >
-      <div
-        className="device-frame"
-        style={{
-          width: 390,
-          height: 844,
-          backgroundColor: '#17161a',
-          borderRadius: 48,
-          overflow: 'hidden',
-          position: 'relative',
-          flexShrink: 0,
-        }}
-      >
+    <div className="device-stage">
+      <div className="device-frame">
+        <div className="device-shell">
         {screen === 'splash' ? (
-          <div
-            className="splash"
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              margin: 0,
-              backgroundColor: '#17161a',
-              display: 'flex',
-              flexDirection: 'column',
-              boxSizing: 'border-box',
-            }}
-          >
+          <div className="splash">
             <div
               className={`splash-center${splashTiming ? ' splash-center--sync' : ''}`}
               style={{
@@ -247,17 +240,23 @@ function App() {
                 minHeight: 0,
                 boxSizing: 'border-box',
                 ...(splashTiming
-                  ? {
-                      ['--splash-sync-i-delay']: `${splashTiming.iMs}ms`,
-                      ['--splash-sync-o-delay']: `${splashTiming.oMs}ms`,
-                      ['--splash-sync-pop']: `${SPLASH_POP_MS}ms`,
-                      ['--splash-gati-spread-ms']: `${SPLASH_GATI_SPREAD_MS}ms`,
-                      ['--splash-worth-spread-ms']: `${SPLASH_WORTH_SPREAD_MS}ms`,
-                      ['--splash-worth-spread-delay']: `${Math.max(
-                        splashTiming.oMs,
-                        splashTiming.iMs + SPLASH_GATI_SPREAD_MS + SPLASH_TAGLINE_AFTER_GATI_MS,
-                      )}ms`,
-                    }
+                  ? (() => {
+                      const gatiTightenStart =
+                        splashTiming.iMs + SPLASH_POP_MS + SPLASH_GATI_HOLD_MS
+                      const gatiTightenEnd = gatiTightenStart + SPLASH_GATI_SPREAD_MS
+                      return {
+                        ['--splash-sync-i-delay']: `${splashTiming.iMs}ms`,
+                        ['--splash-sync-o-delay']: `${splashTiming.oMs}ms`,
+                        ['--splash-sync-pop']: `${SPLASH_POP_MS}ms`,
+                        ['--splash-gati-spread-ms']: `${SPLASH_GATI_SPREAD_MS}ms`,
+                        ['--splash-gati-tighten-delay']: `${gatiTightenStart}ms`,
+                        ['--splash-worth-spread-ms']: `${SPLASH_WORTH_SPREAD_MS}ms`,
+                        ['--splash-worth-spread-delay']: `${Math.max(
+                          splashTiming.oMs,
+                          gatiTightenEnd + SPLASH_TAGLINE_AFTER_GATI_MS,
+                        )}ms`,
+                      }
+                    })()
                   : {}),
               }}
             >
@@ -275,9 +274,16 @@ function App() {
               <SplashTagline />
             </div>
           </div>
+        ) : screen === 'goal' ? (
+          <GoalScreen onTabChange={handleAppNav} />
+        ) : screen === 'gallery' ? (
+          <GalleryScreen galleryItems={galleryItems} onTabChange={handleAppNav} />
+        ) : screen === 'setting' ? (
+          <SettingScreen onTabChange={handleAppNav} />
         ) : (
-          <MainTracker />
+          <MainTracker onTabChange={handleAppNav} onAddGalleryItem={onAddGalleryItem} />
         )}
+        </div>
       </div>
     </div>
   )

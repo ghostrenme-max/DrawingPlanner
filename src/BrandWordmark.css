@@ -1,0 +1,28 @@
+/* Syne 대신: 기하학적 디스플레이 산세리프, ExtraBold — 유사 톤 */
+.brand-mark {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  color: #ffffff;
+  letter-spacing: -0.28px;
+  line-height: 1.2;
+}
+
+.brand-mark-w {
+  color: #ffffff;
+}
+
+.brand-mark-i {
+  color: #fb923c;
+}
+
+.brand-mark-o {
+  color: #2dd4bf;
+}
+
+/* 화면 배경(#0a0a0a)과 동일 — 자리만 차지하고 보이지 않는 구분 */
+.brand-mark-sep {
+  color: #0a0a0a;
+  margin: 0 1px;
+  font-weight: 800;
+}
