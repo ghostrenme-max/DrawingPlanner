@@ -49,12 +49,17 @@ export async function showBanner(marginTop = 0) {
   }
 }
 
+/**
+ * 갤러리·설정 이탈 또는 이번 방문 미노출 시 배너 정리.
+ * Android: `hideBanner()`만 쓰면 뷰가 GONE으로 남고, 다음 `showBanner()`가
+ * 기존 AdView에 loadAd만 해서 화면에 다시 안 나오는 플러그인 동작이 있음 → `removeBanner`로 제거.
+ */
 export async function hideBanner() {
   if (!Capacitor.isNativePlatform()) return
   try {
-    await AdMob.hideBanner()
+    await AdMob.removeBanner()
   } catch (e) {
-    console.warn('[AdMob] hideBanner', e)
+    console.warn('[AdMob] removeBanner', e)
   }
 }
 
