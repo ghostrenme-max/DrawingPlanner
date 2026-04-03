@@ -5,7 +5,6 @@ import { applyGoalDisplayBreaks, splitGoalHeaderParagraphs } from './goalConfig.
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import PlusIcon from './PlusIcon'
-import { TrackerInFeedAdCard } from './TrackerInFeedAdCard.jsx'
 import { readCarryProcessedYm, writeCarryProcessedYm } from './trackerPersistence.js'
 import { prevYm, ymFromDate } from './trackerMonth.js'
 import './MainTracker.css'
@@ -1001,7 +1000,7 @@ function MainTracker({
       ) : null}
 
       <main className="mt-scroll">
-        {displayEntries.flatMap(({ card, kind, keyGoalText }, entryIndex) => {
+        {displayEntries.flatMap(({ card, kind, keyGoalText }) => {
           const expanded = expandedId === card.id
           const urls = cardImages[card.id] || []
           const stageFillCount = countCheckedStages(card.id, stageDone, card, STAGES)
@@ -1184,32 +1183,22 @@ function MainTracker({
             </article>
           )
 
-          const block =
-            cardFeedbacks.length === 0
-              ? [article]
-              : [
-                  article,
-                  ...cardFeedbacks.map((f) => (
-                    <TrackerFeedbackCard
-                      key={`fb-${f.id}`}
-                      card={f}
-                      onRemove={onRemoveFeedbackCard}
-                      onToggleConfirmed={onToggleFeedbackCardConfirmed}
-                      feedbackStrings={feedbackStrings}
-                      onPreviewImage={(url, text) =>
-                        setFeedbackPreview({ src: url, text: typeof text === 'string' ? text : '' })
-                      }
-                    />
-                  )),
-                ]
-
-          if (entryIndex % 3 === 2) {
-            return [
-              ...block,
-              <TrackerInFeedAdCard key={`mt-infeed-ad-${entryIndex}`} slotKey={entryIndex} />,
-            ]
-          }
-          return block
+          if (cardFeedbacks.length === 0) return [article]
+          return [
+            article,
+            ...cardFeedbacks.map((f) => (
+              <TrackerFeedbackCard
+                key={`fb-${f.id}`}
+                card={f}
+                onRemove={onRemoveFeedbackCard}
+                onToggleConfirmed={onToggleFeedbackCardConfirmed}
+                feedbackStrings={feedbackStrings}
+                onPreviewImage={(url, text) =>
+                  setFeedbackPreview({ src: url, text: typeof text === 'string' ? text : '' })
+                }
+              />
+            )),
+          ]
         })}
 
         <button type="button" className="mt-card-add" onClick={addNewCard}>

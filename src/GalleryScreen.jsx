@@ -4,7 +4,8 @@ import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GalleryScreen.css'
-import { hideGalleryBanner, showGalleryBanner } from './hooks/useAdMob.js'
+import { Capacitor } from '@capacitor/core'
+import { hideBanner, shouldShowBannerOnThisTabVisit, showBanner } from './hooks/useAdMob.js'
 
 const MAX_GALLERY_PINS = 3
 const PIN_LIMIT_TOAST_VISIBLE_MS = 2600
@@ -352,13 +353,34 @@ export default function GalleryScreen({
   onOpenReferenceFolder,
 }) {
   const { t, lang } = useLang()
+  const galleryHeaderBannerRef = useRef(/** @type {HTMLElement | null} */ (null))
+  const [showBannerThisVisit] = useState(() => shouldShowBannerOnThisTabVisit())
 
   useEffect(() => {
-    void showGalleryBanner()
-    return () => {
-      void hideGalleryBanner()
+    if (!Capacitor.isNativePlatform()) return undefined
+
+    let cancelled = false
+    const placeBanner = () => {
+      if (cancelled) return
+      const el = galleryHeaderBannerRef.current
+      const h = el ? Math.round(el.getBoundingClientRect().height) : 0
+      if (showBannerThisVisit) {
+        void showBanner(h > 0 ? h : 72)
+      } else {
+        void hideBanner()
+      }
     }
-  }, [])
+
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(placeBanner)
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf)
+      void hideBanner()
+    }
+  }, [showBannerThisVisit])
 
   const [lightbox, setLightbox] = useState(
     /** @type {{ src: string; itemId: string; imageIndex: number } | null} */ (null),
@@ -689,7 +711,11 @@ export default function GalleryScreen({
   const isEmpty = items.length === 0
 
   return (
-    <div className={`gallery-screen${lang === 'en' ? ' gallery-screen--en' : ''}`}>
+    <div
+      className={`gallery-screen${lang === 'en' ? ' gallery-screen--en' : ''}${
+        Capacitor.isNativePlatform() && showBannerThisVisit ? ' gallery-screen--top-banner' : ''
+      }`}
+    >
       {showDetailView && detailLiveItem ? (
         <div
           className="gallery-group-detail"
@@ -1024,7 +1050,7 @@ export default function GalleryScreen({
         </div>
       ) : null}
 
-      <header className="gallery-header">
+      <header className="gallery-header" ref={galleryHeaderBannerRef}>
         <div className="gallery-header-brand">
           <BrandWordmark />
           {!isEmpty ? (

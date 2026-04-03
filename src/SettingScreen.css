@@ -37,6 +37,10 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.setting-screen--top-banner .setting-scroll {
+  padding-top: 50px;
+}
+
 .setting-section {
   margin-bottom: 18px;
 }

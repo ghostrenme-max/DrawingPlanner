@@ -291,7 +291,9 @@ function App() {
   const [screen, setScreen] = useState(
     /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference'} */ ('splash'),
   )
-  const { showInterstitialAfterGallerySend } = useAdMob({ adsEnabled: screen !== 'splash' })
+  const { showInterstitialAfterGallerySend, maybeShowInterstitialAfterBottomNavMove } = useAdMob({
+    adsEnabled: screen !== 'splash',
+  })
   /** 트래커 탭(재)진입마다 증가 → 상단 진행 바·% 애니 재생 */
   const [trackerBarReplayKey, setTrackerBarReplayKey] = useState(0)
   const [galleryItems, setGalleryItems] = useState(
@@ -315,6 +317,11 @@ function App() {
     GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD ? true : readGoalWelcomeShouldShow(),
   )
   const hadGoal1yTextRef = useRef(!!(goalTexts['1y'] ?? '').trim())
+  const screenRef = useRef(screen)
+
+  useEffect(() => {
+    screenRef.current = screen
+  }, [screen])
 
   const toggleGalleryPin = useCallback((pinKey) => {
     setGalleryPinnedKeys((prev) => {
@@ -340,16 +347,33 @@ function App() {
   const handleAppNav = useCallback(
     /** @param {'tracker' | 'goal' | 'gallery' | 'settings'} tab */
     (tab) => {
+      /** @type {Record<string, typeof screen>} */
+      const tabToScreen = {
+        tracker: 'main',
+        goal: 'goal',
+        gallery: 'gallery',
+        settings: 'setting',
+      }
+      const next = tabToScreen[tab]
+      if (next == null) return
+      const prev = screenRef.current
+
       if (tab === 'tracker') {
         setScreen('main')
         setTrackerBarReplayKey((k) => k + 1)
-        return
+      } else if (tab === 'goal') {
+        setScreen('goal')
+      } else if (tab === 'gallery') {
+        setScreen('gallery')
+      } else if (tab === 'settings') {
+        setScreen('setting')
       }
-      if (tab === 'goal') setScreen('goal')
-      else if (tab === 'gallery') setScreen('gallery')
-      else if (tab === 'settings') setScreen('setting')
+
+      if (prev !== next) {
+        maybeShowInterstitialAfterBottomNavMove()
+      }
     },
-    [],
+    [maybeShowInterstitialAfterBottomNavMove],
   )
 
   const onAddGalleryItem = useCallback(

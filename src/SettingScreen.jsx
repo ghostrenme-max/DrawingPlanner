@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useLang } from './contexts/LanguageContext.js'
 import { APP_THEME_PRESETS } from './appTheme.js'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import { createEmptyGoalTexts } from './goalConfig.js'
 import BrandWordmark from './BrandWordmark.jsx'
+import { hideBanner, shouldShowBannerOnThisTabVisit, showBanner } from './hooks/useAdMob.js'
 
 /** 설정 GOALS · DAY 탭 (goalTexts 키는 기존 dm_* 와 동일) */
 const GOAL_TAB_DAY_ROWS = [
@@ -81,6 +83,35 @@ export default function SettingScreen({
   onMonthlyGoalsChange,
 }) {
   const { t, lang, setLang } = useLang()
+  const settingsHeaderBannerRef = useRef(/** @type {HTMLElement | null} */ (null))
+  const [showBannerThisVisit] = useState(() => shouldShowBannerOnThisTabVisit())
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined
+
+    let cancelled = false
+    const placeBanner = () => {
+      if (cancelled) return
+      const el = settingsHeaderBannerRef.current
+      const h = el ? Math.round(el.getBoundingClientRect().height) : 0
+      if (showBannerThisVisit) {
+        void showBanner(h > 0 ? h : 72)
+      } else {
+        void hideBanner()
+      }
+    }
+
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(placeBanner)
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf)
+      void hideBanner()
+    }
+  }, [showBannerThisVisit])
+
   const [nickname, setNickname] = useState('')
   const [creativeField, setCreativeField] = useState('')
   const [goalOpenId, setGoalOpenId] = useState(/** @type {string | null} */ (null))
@@ -116,8 +147,12 @@ export default function SettingScreen({
   }
 
   return (
-    <div className="setting-screen">
-      <header className="setting-header">
+    <div
+      className={`setting-screen${
+        Capacitor.isNativePlatform() && showBannerThisVisit ? ' setting-screen--top-banner' : ''
+      }`}
+    >
+      <header className="setting-header" ref={settingsHeaderBannerRef}>
         <div className="setting-header-brand">
           <BrandWordmark />
         </div>

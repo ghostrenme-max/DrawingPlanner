@@ -44,6 +44,11 @@
   box-sizing: border-box;
 }
 
+/* 상단 네이티브 배너(~50px) — 헤더 아래 오버레이에 맞춘 콘텐츠 여백 */
+.gallery-screen--top-banner .gallery-body {
+  padding-top: 50px;
+}
+
 .gallery-scroll {
   flex: 1;
   min-height: 0;
