@@ -137,6 +137,16 @@ function formatSectionMonthLabel(monthDot) {
   return `${y} · ${mo}`
 }
 
+/** 현재 월 포함 과거 12개월 키 (YYYY.MM) */
+function last12MonthKeysFromDate(anchor = new Date()) {
+  const out = []
+  for (let i = 0; i < 12; i++) {
+    const x = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1)
+    out.push(`${x.getFullYear()}.${String(x.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return out
+}
+
 /** 월별 섹션 키 (YYYY.MM). 저장된 month 우선, 없으면 업로드 시각(로컬 월). */
 function sectionMonthKeyForItem(it) {
   const normalized = normalizeMonthStr(it.month)
@@ -227,6 +237,13 @@ export default function GalleryScreen({
   const [monthFilters, setMonthFilters] = useState(
     /** @type {Record<string, 'all' | 'general' | 'process'>} */ ({}),
   )
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const [selectedMonthKey, setSelectedMonthKey] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+
+  const pickerMonthKeys = useMemo(() => last12MonthKeysFromDate(), [])
 
   const items = useMemo(() => {
     const out = []
@@ -247,9 +264,26 @@ export default function GalleryScreen({
     return acc
   }, [items])
 
-  const monthKeys = useMemo(() => Object.keys(byMonth).sort().reverse(), [byMonth])
-
   const pinnedKeySet = useMemo(() => new Set(galleryPinnedKeys), [galleryPinnedKeys])
+
+  const selectedMonthFilter = monthFilters[selectedMonthKey] ?? 'all'
+  const visibleItemsForSelectedMonth = useMemo(() => {
+    const monthItems = byMonth[selectedMonthKey] ?? []
+    return monthItems.filter((item) => {
+      if (selectedMonthFilter === 'general') return !item.grouped
+      if (selectedMonthFilter === 'process') return item.grouped
+      return true
+    })
+  }, [byMonth, selectedMonthKey, selectedMonthFilter])
+
+  useEffect(() => {
+    if (!showMonthPicker) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowMonthPicker(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showMonthPicker])
 
   const endDrag = useCallback(() => {
     setDraggingId(null)
@@ -392,45 +426,99 @@ export default function GalleryScreen({
               </div>
             </div>
           ) : (
-            monthKeys.map((monthKey) => {
-              const filter = monthFilters[monthKey] ?? 'all'
-              const monthItems = byMonth[monthKey]
-              const visibleItems = monthItems.filter((item) => {
-                if (filter === 'general') return !item.grouped
-                if (filter === 'process') return item.grouped
-                return true
-              })
-
-              return (
-              <section key={monthKey} className="gallery-month-block">
+            <div
+              className={`gallery-month-picker-root${showMonthPicker ? ' gallery-month-picker-root--open' : ''}`}
+            >
+              {showMonthPicker ? (
+                <div
+                  className="gallery-month-picker-overlay"
+                  role="presentation"
+                  aria-hidden
+                  onClick={() => setShowMonthPicker(false)}
+                />
+              ) : null}
+              <section className="gallery-month-block">
                 <div className="gallery-month-head">
-                  <div className="gallery-month-top-row">
-                    <div className="gallery-month-label">{formatSectionMonthLabel(monthKey)}</div>
-                    <div
-                      className="gallery-month-filters"
-                      role="radiogroup"
-                      aria-label={`${formatSectionMonthLabel(monthKey)} 보기`}
-                    >
-                      {[
-                        { id: 'all', label: '전체' },
-                        { id: 'general', label: '일반' },
-                        { id: 'process', label: '과정' },
-                      ].map(({ id, label }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          role="radio"
-                          aria-checked={filter === id}
-                          className={`gallery-month-filter${filter === id ? ' gallery-month-filter--on' : ''}`}
-                          onClick={() =>
-                            setMonthFilters((prev) => ({ ...prev, [monthKey]: id }))
-                          }
+                  <div className="gallery-month-picker-anchor">
+                    <div className="gallery-month-top-row">
+                      <button
+                        type="button"
+                        className="gallery-month-label-btn"
+                        aria-expanded={showMonthPicker}
+                        aria-haspopup="listbox"
+                        aria-label="월 선택"
+                        onClick={() => setShowMonthPicker((v) => !v)}
+                      >
+                        <span className="gallery-month-label-btn-text">
+                          {formatSectionMonthLabel(selectedMonthKey)}
+                        </span>
+                        <svg
+                          className="gallery-month-label-chevron"
+                          viewBox="0 0 10 7"
+                          width={10}
+                          height={7}
+                          aria-hidden
                         >
-                          <span className="gallery-month-filter-check" aria-hidden />
-                          <span className="gallery-month-filter-text">{label}</span>
-                        </button>
-                      ))}
+                          <path d="M0 0L10 0L5 7z" fill="currentColor" />
+                        </svg>
+                      </button>
+                      <div
+                        className="gallery-month-filters"
+                        role="radiogroup"
+                        aria-label={`${formatSectionMonthLabel(selectedMonthKey)} 보기`}
+                      >
+                        {[
+                          { id: 'all', label: '전체' },
+                          { id: 'general', label: '일반' },
+                          { id: 'process', label: '과정' },
+                        ].map(({ id, label }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selectedMonthFilter === id}
+                            className={`gallery-month-filter${selectedMonthFilter === id ? ' gallery-month-filter--on' : ''}`}
+                            onClick={() =>
+                              setMonthFilters((prev) => ({ ...prev, [selectedMonthKey]: id }))
+                            }
+                          >
+                            <span className="gallery-month-filter-check" aria-hidden />
+                            <span className="gallery-month-filter-text">{label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                    {showMonthPicker ? (
+                      <div className="gallery-month-picker-popup" role="listbox" aria-label="월 선택">
+                        {pickerMonthKeys.map((key) => {
+                          const selected = key === selectedMonthKey
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              className={`gallery-month-picker-item${selected ? ' gallery-month-picker-item--selected' : ''}`}
+                              onClick={() => {
+                                setSelectedMonthKey(key)
+                                setShowMonthPicker(false)
+                              }}
+                            >
+                              <span className="gallery-month-picker-item-inner">
+                                {selected ? (
+                                  <span className="gallery-month-picker-dot" aria-hidden>
+                                    ●
+                                  </span>
+                                ) : (
+                                  <span className="gallery-month-picker-dot-spacer" aria-hidden />
+                                )}
+                                <span className="gallery-month-picker-item-label">{key}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="gallery-month-folder-slot">
                     <button type="button" className="gallery-month-folder-btn" aria-label="Reference folder">
@@ -440,12 +528,12 @@ export default function GalleryScreen({
                   </div>
                 </div>
                 <div className="gallery-card-list">
-                  {visibleItems.length === 0 ? (
+                  {visibleItemsForSelectedMonth.length === 0 ? (
                     <p className="gallery-month-filter-empty" role="status">
                       이 구간에 표시할 항목이 없어요.
                     </p>
                   ) : null}
-                  {visibleItems.map((item) => (
+                  {visibleItemsForSelectedMonth.map((item) => (
                     <DraggableGalleryRow
                       key={item.id}
                       item={item}
@@ -476,8 +564,7 @@ export default function GalleryScreen({
                   ))}
                 </div>
               </section>
-              )
-            })
+            </div>
           )}
         </div>
 

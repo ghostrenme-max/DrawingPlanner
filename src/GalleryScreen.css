@@ -147,6 +147,142 @@
   min-width: 0;
 }
 
+.gallery-month-picker-root {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.gallery-month-picker-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 99;
+}
+
+.gallery-month-picker-root--open .gallery-month-picker-anchor {
+  position: relative;
+  z-index: 102;
+}
+
+.gallery-month-picker-anchor {
+  min-width: 0;
+}
+
+.gallery-month-label-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+  min-width: 0;
+}
+
+.gallery-month-label-btn-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ww-main);
+}
+
+.gallery-month-label-btn:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.gallery-month-label-chevron {
+  flex-shrink: 0;
+  display: block;
+  color: var(--ww-main);
+}
+
+.gallery-month-picker-popup {
+  position: absolute;
+  top: 100%;
+  left: 18px;
+  margin-top: 6px;
+  z-index: 100;
+  box-sizing: border-box;
+  width: 160px;
+  padding: 8px 0;
+  background: #1e1c20;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+}
+
+.gallery-month-picker-item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.gallery-month-picker-item:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gallery-month-picker-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gallery-month-picker-item:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: -2px;
+}
+
+.gallery-month-picker-item--selected {
+  color: #fb923c;
+}
+
+.gallery-month-picker-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gallery-month-picker-dot {
+  flex-shrink: 0;
+  width: 1em;
+  text-align: center;
+  font-size: 8px;
+  line-height: 1;
+  color: #fb923c;
+}
+
+.gallery-month-picker-dot-spacer {
+  flex-shrink: 0;
+  width: 1em;
+}
+
+.gallery-month-picker-item-label {
+  min-width: 0;
+}
+
 .gallery-month-filters {
   display: flex;
   align-items: center;

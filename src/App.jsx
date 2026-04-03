@@ -6,7 +6,7 @@ import GalleryScreen from './GalleryScreen.jsx'
 import GoalScreen from './GoalScreen.jsx'
 import MainTracker from './MainTracker.jsx'
 import SettingScreen from './SettingScreen.jsx'
-import GoalWelcomeModal from './GoalWelcomeModal.jsx'
+import OnboardingScreen from './OnboardingScreen.jsx'
 import './App.css'
 
 /**
@@ -305,6 +305,7 @@ function App() {
   }, [])
 
   const [goalTexts, setGoalTexts] = useState(() => createEmptyGoalTexts())
+  const [, setMonthlyGoals] = useState(() => Array.from({ length: 12 }, () => ''))
   const [goalStartDate, setGoalStartDate] = useState('')
   const [goal1yMainStrip, setGoal1yMainStrip] = useState(
     /** @type {'tip' | 'sample' | 'hidden'} */ ('tip'),
@@ -372,6 +373,7 @@ function App() {
     setAppFeatures({ ...DEFAULT_APP_FEATURES })
     setThemeIndex(DEFAULT_THEME_INDEX)
     setGoalTexts(createEmptyGoalTexts())
+    setMonthlyGoals(Array.from({ length: 12 }, () => ''))
     setGoalStartDate('')
     clearLegacyGoalStripKeys()
     if (!GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD) {
@@ -541,13 +543,18 @@ function App() {
         )}
           </div>
           {screen === 'main' && goalWelcomeVisible ? (
-            <GoalWelcomeModal
+            <OnboardingScreen
               initialText={goalTexts['1y'] ?? ''}
-              onSave={(text) => {
+              onDismiss={dismissGoalWelcome}
+              onFinishWithMonthly={(text, months) => {
+                setGoalTexts((prev) => ({ ...prev, '1y': text }))
+                setMonthlyGoals(months)
+                dismissGoalWelcome()
+              }}
+              onFinishGoalOnly={(text) => {
                 setGoalTexts((prev) => ({ ...prev, '1y': text }))
                 dismissGoalWelcome()
               }}
-              onSkip={dismissGoalWelcome}
             />
           ) : null}
         </div>
