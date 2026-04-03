@@ -108,15 +108,24 @@ export function distributeCountAcrossMonths(total, n = 12) {
  * @param {string | null} selectedField
  * @returns {string[]}
  */
-export function buildInitialMonthlyGoals(goalText, selectedField) {
+/**
+ * @param {string} goalText
+ * @param {string | null} selectedField
+ * @param {number} monthIndex 0–11
+ * @returns {string}
+ */
+export function getSuggestedMonthlyLine(goalText, selectedField, monthIndex) {
   const template = getMonthlyTemplateForField(selectedField)
+  const base = template[monthIndex] ?? ''
   const match = typeof goalText === 'string' ? goalText.match(/\d+/) : null
   const total = match ? parseInt(match[0], 10) : 0
   const counts = total > 0 ? distributeCountAcrossMonths(total, 12) : null
+  const c = counts?.[monthIndex] ?? 0
+  const suffix = c > 0 ? ` (목표: ${c}개)` : ''
+  return base + suffix
+}
 
-  return template.map((base, i) => {
-    const c = counts?.[i] ?? 0
-    const suffix = c > 0 ? ` (목표: ${c}개)` : ''
-    return base + suffix
-  })
+export function buildInitialMonthlyGoals(goalText, selectedField) {
+  const template = getMonthlyTemplateForField(selectedField)
+  return template.map((_, i) => getSuggestedMonthlyLine(goalText, selectedField, i))
 }

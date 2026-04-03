@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { APP_THEME_PRESETS } from './appTheme.js'
+import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import { createEmptyGoalTexts, GOAL_DAY_MONTH_ROWS, GOAL_YEAR_ROWS } from './goalConfig.js'
 import './SettingScreen.css'
 
@@ -286,23 +287,31 @@ export default function SettingScreen({
 
       <nav className="setting-nav" aria-label="하단 메뉴">
         <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('tracker')}>
-          <span className="setting-nav-icon" aria-hidden />
+          <span className="setting-nav-icon" aria-hidden>
+            <NavIconTracker />
+          </span>
           트래커
         </button>
         {features.goalScreen ? (
           <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('goal')}>
-            <span className="setting-nav-icon" aria-hidden />
+            <span className="setting-nav-icon" aria-hidden>
+              <NavIconGoal />
+            </span>
             목표
           </button>
         ) : null}
         {features.gallery ? (
           <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('gallery')}>
-            <span className="setting-nav-icon" aria-hidden />
+            <span className="setting-nav-icon" aria-hidden>
+              <NavIconGallery />
+            </span>
             갤러리
           </button>
         ) : null}
         <button type="button" className="setting-nav-item setting-nav-item--active">
-          <span className="setting-nav-icon" aria-hidden />
+          <span className="setting-nav-icon" aria-hidden>
+            <NavIconSettings />
+          </span>
           설정
         </button>
       </nav>

@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   buildInitialMonthlyGoals,
+  getSuggestedMonthlyLine,
   ONBOARDING_FIELD_OPTIONS,
 } from './onboardingTemplates.js'
 import './OnboardingScreen.css'
+
+const MONTH_KEYS = Array.from({ length: 12 }, (_, i) => String(i + 1))
 
 /**
  * 1단계: 1년 목표 텍스트 + 창작 분야
@@ -26,9 +29,14 @@ export default function OnboardingScreen({
   const [goalText, setGoalText] = useState(initialText)
   const [selectedField, setSelectedField] = useState(/** @type {string | null} */ (null))
   const [monthlyGoals, setMonthlyGoals] = useState(() => buildInitialMonthlyGoals('', null))
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedEditMonth, setSelectedEditMonth] = useState('1')
+  const [editModalTextareaFocused, setEditModalTextareaFocused] = useState(false)
 
   const areaRef = useRef(null)
   const inputRefs = useRef(/** @type {(HTMLInputElement | null)[]} */ ([]))
+  const editTextareaRef = useRef(/** @type {HTMLTextAreaElement | null} */ (null))
+  const tabBtnRefs = useRef(/** @type {(HTMLButtonElement | null)[]} */ ([]))
 
   useEffect(() => {
     setGoalText(initialText)
@@ -41,6 +49,39 @@ export default function OnboardingScreen({
     })
     return () => window.cancelAnimationFrame(id)
   }, [step])
+
+  useEffect(() => {
+    if (!showEditModal) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowEditModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showEditModal])
+
+  useEffect(() => {
+    if (!showEditModal) return
+    const idx = parseInt(selectedEditMonth, 10) - 1
+    const el = tabBtnRefs.current[idx]
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+  }, [selectedEditMonth, showEditModal])
+
+  const openEditModal = () => {
+    setSelectedEditMonth('1')
+    setEditModalTextareaFocused(false)
+    setShowEditModal(true)
+  }
+
+  const editMonthIndex = parseInt(selectedEditMonth, 10) - 1
+  const goalTrimmed = goalText.trim()
+  const suggestedMonthlyLine = getSuggestedMonthlyLine(goalTrimmed, selectedField, editMonthIndex)
+  const editMonthRaw = monthlyGoals[editMonthIndex] ?? ''
+  const editModalGhostMode =
+    !editModalTextareaFocused && editMonthRaw === suggestedMonthlyLine && suggestedMonthlyLine.length > 0
+
+  useEffect(() => {
+    if (!showEditModal) setEditModalTextareaFocused(false)
+  }, [showEditModal])
 
   const goStep2 = () => {
     setMonthlyGoals(buildInitialMonthlyGoals(goalText.trim(), selectedField))
@@ -65,13 +106,15 @@ export default function OnboardingScreen({
         onClick={(e) => e.stopPropagation()}
       >
         <h1 id="ob-title" className="ob-title">
-          1years goals
+          올해의 목표
         </h1>
 
         {step === 1 ? (
           <>
             <p className="ob-lead">
-              이루고 싶은 목표를 1년치만 떼서 적어보세요.
+              이루고 싶은 목표를
+              <br />
+              1년치만 떼서 적어보세요.
               <br />
               목표는 설정 탭에서 수정 가능합니다.
             </p>
@@ -117,17 +160,27 @@ export default function OnboardingScreen({
               <p className="ob-confirm-text">{goalText.trim() || '—'}</p>
             </div>
             <div className="ob-auto-hint">
-              <span className="ob-auto-hint-dot" aria-hidden />
-              <p className="ob-auto-hint-text">12개월로 자동 배분했어요 — 수정 가능해요</p>
+              <div className="ob-auto-hint-left">
+                <span className="ob-auto-hint-dot" aria-hidden />
+                <p className="ob-auto-hint-text">12개월로 자동 배분했어요</p>
+              </div>
+              <button
+                type="button"
+                className="ob-auto-hint-edit"
+                aria-label="월별 목표 수정"
+                onClick={openEditModal}
+              >
+                수정
+              </button>
             </div>
             <div className="ob-month-scroll">
               {monthlyGoals.map((value, i) => {
                 const has = value.trim().length > 0
-                const mm = String(i + 1).padStart(2, '0')
+                const monthNum = i + 1
                 return (
                   <div key={i} className="ob-month-item">
                     <div className="ob-month-item-head">
-                      <span className="ob-month-item-label">{mm}월</span>
+                      <span className="ob-month-item-label">{monthNum}월</span>
                       {has ? (
                         <span className="ob-month-item-done" aria-hidden>
                           ✓
@@ -156,26 +209,127 @@ export default function OnboardingScreen({
                             return next
                           })
                         }}
-                        aria-label={`${mm}월 목표`}
+                        aria-label={`${monthNum}월 목표`}
                       />
-                      <button
-                        type="button"
-                        className="ob-month-item-edit"
-                        onClick={() => inputRefs.current[i]?.focus()}
-                      >
-                        수정
-                      </button>
                     </div>
                   </div>
                 )
               })}
             </div>
             <button type="button" className="ob-start-btn" onClick={handleStart}>
-              시작하기 →
+              목표 저장하고 시작
             </button>
             <button type="button" className="ob-skip-detail" onClick={handleSkipDetail}>
-              그냥 시작하기
+              나중에 채울게요
             </button>
+
+            {showEditModal ? (
+              <div
+                className="ob-edit-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="월별 목표 수정"
+              >
+                <header className="ob-edit-modal-header">
+                  <button
+                    type="button"
+                    className="ob-edit-modal-close"
+                    onClick={() => setShowEditModal(false)}
+                  >
+                    ← 닫기
+                  </button>
+                  <button type="button" className="ob-edit-modal-done" onClick={() => setShowEditModal(false)}>
+                    완료
+                  </button>
+                </header>
+                <div className="ob-edit-modal-tabs-wrap">
+                  <div className="ob-edit-modal-tabs">
+                    <div className="ob-edit-modal-tabs-row" role="tablist" aria-label="월 선택">
+                      {MONTH_KEYS.map((mm, idx) => {
+                        const on = selectedEditMonth === mm
+                        return (
+                          <button
+                            key={mm}
+                            ref={(el) => {
+                              tabBtnRefs.current[idx] = el
+                            }}
+                            type="button"
+                            role="tab"
+                            aria-selected={on}
+                            className={`ob-edit-modal-tab${on ? ' ob-edit-modal-tab--on' : ''}`}
+                            onClick={() => setSelectedEditMonth(mm)}
+                          >
+                            {mm}월
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <p className="ob-edit-modal-tabs-swipe-hint">옆으로 밀어 7~12월을 선택할 수 있어요</p>
+                </div>
+                <div className="ob-edit-modal-body">
+                  <label className="ob-edit-modal-label" htmlFor="ob-edit-modal-textarea">
+                    {selectedEditMonth}월 목표
+                  </label>
+                  <div className="ob-edit-modal-field-wrap">
+                    {editModalGhostMode ? (
+                      <div className="ob-edit-modal-textarea-mirror" aria-hidden>
+                        <span className="ob-edit-modal-caret" />
+                        <span className="ob-edit-modal-ghost-text">{suggestedMonthlyLine}</span>
+                      </div>
+                    ) : null}
+                    <textarea
+                      id="ob-edit-modal-textarea"
+                      ref={editTextareaRef}
+                      className={`ob-edit-modal-textarea${editModalGhostMode ? ' ob-edit-modal-textarea--ghost' : ''}`}
+                      value={editMonthRaw}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setMonthlyGoals((prev) => {
+                          const next = [...prev]
+                          next[editMonthIndex] = v
+                          return next
+                        })
+                      }}
+                      onFocus={() => {
+                        setEditModalTextareaFocused(true)
+                        if (editMonthRaw === suggestedMonthlyLine) {
+                          setMonthlyGoals((prev) => {
+                            const next = [...prev]
+                            next[editMonthIndex] = ''
+                            return next
+                          })
+                        }
+                      }}
+                      onBlur={() => {
+                        setEditModalTextareaFocused(false)
+                        setMonthlyGoals((prev) => {
+                          const cur = prev[editMonthIndex] ?? ''
+                          if (cur.trim() !== '') return prev
+                          const next = [...prev]
+                          next[editMonthIndex] = getSuggestedMonthlyLine(
+                            goalTrimmed,
+                            selectedField,
+                            editMonthIndex,
+                          )
+                          return next
+                        })
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Tab' || e.shiftKey) return
+                        e.preventDefault()
+                        setSelectedEditMonth((prev) => {
+                          const n = parseInt(prev, 10)
+                          const nextN = n >= 12 ? 1 : n + 1
+                          return String(nextN)
+                        })
+                      }}
+                    />
+                  </div>
+                  <p className="ob-edit-modal-hint">탭으로 다음 달로 넘어갈 수 있어요</p>
+                </div>
+              </div>
+            ) : null}
           </>
         )}
       </div>

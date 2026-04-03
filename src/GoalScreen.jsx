@@ -16,6 +16,7 @@ import {
   timelineBarLabel,
 } from './goalYearTimeline.js'
 import BrandWordmark from './BrandWordmark'
+import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GoalScreen.css'
 
 /** 이미 지난 달(100% 채움) 막대 상승 — 빠르게 */
@@ -827,21 +828,29 @@ export default function GoalScreen({
 
       <nav className="goal-nav" aria-label="하단 메뉴">
         <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('tracker')}>
-          <span className="goal-nav-icon" aria-hidden />
+          <span className="goal-nav-icon" aria-hidden>
+            <NavIconTracker />
+          </span>
           트래커
         </button>
         <button type="button" className="goal-nav-item goal-nav-item--active">
-          <span className="goal-nav-icon" aria-hidden />
+          <span className="goal-nav-icon" aria-hidden>
+            <NavIconGoal />
+          </span>
           목표
         </button>
         {features.gallery ? (
           <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('gallery')}>
-            <span className="goal-nav-icon" aria-hidden />
+            <span className="goal-nav-icon" aria-hidden>
+              <NavIconGallery />
+            </span>
             갤러리
           </button>
         ) : null}
         <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('settings')}>
-          <span className="goal-nav-icon" aria-hidden />
+          <span className="goal-nav-icon" aria-hidden>
+            <NavIconSettings />
+          </span>
           설정
         </button>
       </nav>

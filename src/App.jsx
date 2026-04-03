@@ -5,8 +5,19 @@ import { applyThemeToDocument, DEFAULT_THEME_INDEX } from './appTheme.js'
 import GalleryScreen from './GalleryScreen.jsx'
 import GoalScreen from './GoalScreen.jsx'
 import MainTracker from './MainTracker.jsx'
+import ReferenceFolderScreen from './ReferenceFolderScreen.jsx'
 import SettingScreen from './SettingScreen.jsx'
 import OnboardingScreen from './OnboardingScreen.jsx'
+import { createDefaultTrackerCards } from './trackerCardsDefaults.js'
+import {
+  FEEDBACK_CARDS_LS,
+  loadFeedbackCardsFromStorage,
+  loadMonthlyGoalsFromStorage,
+  loadTrackerCardsFromStorage,
+  MONTHLY_GOALS_LS,
+  TRACKER_CARDS_LS,
+  TRACKER_CARRY_YM_LS,
+} from './trackerPersistence.js'
 import './App.css'
 
 /**
@@ -65,6 +76,19 @@ function revokeGalleryBlobUrls(items) {
         } catch {
           /* ignore */
         }
+      }
+    }
+  }
+}
+
+function revokeReferenceBlobUrls(items) {
+  for (const it of items) {
+    const u = it.url
+    if (typeof u === 'string' && u.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(u)
+      } catch {
+        /* ignore */
       }
     }
   }
@@ -244,7 +268,9 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState(/** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting'} */ ('splash'))
+  const [screen, setScreen] = useState(
+    /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference'} */ ('splash'),
+  )
   /** 트래커 탭(재)진입마다 증가 → 상단 진행 바·% 애니 재생 */
   const [trackerBarReplayKey, setTrackerBarReplayKey] = useState(0)
   const [galleryItems, setGalleryItems] = useState(
@@ -252,6 +278,9 @@ function App() {
   )
   /** 갤러리 이미지 고정: `itemId::imageIndex` (최대 3개) */
   const [galleryPinnedKeys, setGalleryPinnedKeys] = useState(/** @type {string[]} */ ([]))
+  const [referenceImages, setReferenceImages] = useState(
+    /** @type {Array<{ id: string; url: string; tag: string; memo: string; savedAt: string }>} */ ([]),
+  )
 
   const toggleGalleryPin = useCallback((pinKey) => {
     setGalleryPinnedKeys((prev) => {
@@ -296,6 +325,24 @@ function App() {
     [],
   )
 
+  const appendFeedbackCard = useCallback(
+    /** @param {{ id: number; text: string; workTitle: string; date: string; type: 'orange' | 'teal'; month: string; previewImageUrl?: string; confirmed?: boolean }} entry */
+    (entry) => {
+      setFeedbackCards((prev) => [...prev, { ...entry, confirmed: entry.confirmed ?? false }])
+    },
+    [],
+  )
+
+  const removeFeedbackCard = useCallback((id) => {
+    setFeedbackCards((prev) => prev.filter((f) => f.id !== id))
+  }, [])
+
+  const toggleFeedbackCardConfirmed = useCallback((id) => {
+    setFeedbackCards((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, confirmed: !f.confirmed } : f)),
+    )
+  }, [])
+
   const handleClearGallery = useCallback(() => {
     setGalleryItems((prev) => {
       revokeGalleryBlobUrls(prev)
@@ -305,7 +352,9 @@ function App() {
   }, [])
 
   const [goalTexts, setGoalTexts] = useState(() => createEmptyGoalTexts())
-  const [, setMonthlyGoals] = useState(() => Array.from({ length: 12 }, () => ''))
+  const [monthlyGoals, setMonthlyGoals] = useState(() => loadMonthlyGoalsFromStorage())
+  const [trackerCards, setTrackerCards] = useState(() => loadTrackerCardsFromStorage())
+  const [feedbackCards, setFeedbackCards] = useState(() => loadFeedbackCardsFromStorage())
   const [goalStartDate, setGoalStartDate] = useState('')
   const [goal1yMainStrip, setGoal1yMainStrip] = useState(
     /** @type {'tip' | 'sample' | 'hidden'} */ ('tip'),
@@ -318,6 +367,30 @@ function App() {
   useEffect(() => {
     clearLegacyGoalStripKeys()
   }, [])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TRACKER_CARDS_LS, JSON.stringify(trackerCards))
+    } catch {
+      /* ignore */
+    }
+  }, [trackerCards])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FEEDBACK_CARDS_LS, JSON.stringify(feedbackCards))
+    } catch {
+      /* ignore */
+    }
+  }, [feedbackCards])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MONTHLY_GOALS_LS, JSON.stringify(monthlyGoals))
+    } catch {
+      /* ignore */
+    }
+  }, [monthlyGoals])
 
   /** 스플래시 후 main 진입 시마다 LS 기준으로 팝업 표시 동기화(초기 state·Strict Mode 꼬임 방지). 테스트 모드에선 비활성. */
   useLayoutEffect(() => {
@@ -366,6 +439,10 @@ function App() {
   }, [])
 
   const handleResetApp = useCallback(() => {
+    setReferenceImages((prev) => {
+      revokeReferenceBlobUrls(prev)
+      return []
+    })
     setGalleryItems((prev) => {
       revokeGalleryBlobUrls(prev)
       return []
@@ -374,7 +451,17 @@ function App() {
     setThemeIndex(DEFAULT_THEME_INDEX)
     setGoalTexts(createEmptyGoalTexts())
     setMonthlyGoals(Array.from({ length: 12 }, () => ''))
+    setTrackerCards(createDefaultTrackerCards())
+    setFeedbackCards([])
     setGoalStartDate('')
+    try {
+      window.localStorage.removeItem(TRACKER_CARDS_LS)
+      window.localStorage.removeItem(TRACKER_CARRY_YM_LS)
+      window.localStorage.removeItem(MONTHLY_GOALS_LS)
+      window.localStorage.removeItem(FEEDBACK_CARDS_LS)
+    } catch {
+      /* ignore */
+    }
     clearLegacyGoalStripKeys()
     if (!GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD) {
       try {
@@ -501,6 +588,14 @@ function App() {
             goalTexts={goalTexts}
             goalStartDate={goalStartDate}
           />
+        ) : screen === 'reference' ? (
+          <ReferenceFolderScreen
+            referenceImages={referenceImages}
+            onReferenceImagesChange={setReferenceImages}
+            onBack={() => setScreen('gallery')}
+            onTabChange={handleAppNav}
+            features={appFeatures}
+          />
         ) : screen === 'gallery' ? (
           <GalleryScreen
             galleryItems={galleryItems}
@@ -511,6 +606,9 @@ function App() {
             galleryPinnedKeys={galleryPinnedKeys}
             onToggleGalleryPin={toggleGalleryPin}
             onPruneGalleryPinsForItemIds={pruneGalleryPinsForItemIds}
+            trackerCards={trackerCards}
+            onAppendFeedbackCard={appendFeedbackCard}
+            onOpenReferenceFolder={() => setScreen('reference')}
           />
         ) : screen === 'setting' ? (
           <SettingScreen
@@ -539,6 +637,12 @@ function App() {
             onDismissGoal1yTip={dismissGoal1yTipToSample}
             goal1yValue={goalTexts['1y'] ?? ''}
             onGoal1yChange={onGoal1yQuickChange}
+            monthlyGoals={monthlyGoals}
+            trackerCards={trackerCards}
+            onTrackerCardsChange={setTrackerCards}
+            feedbackCards={feedbackCards}
+            onRemoveFeedbackCard={removeFeedbackCard}
+            onToggleFeedbackCardConfirmed={toggleFeedbackCardConfirmed}
           />
         )}
           </div>

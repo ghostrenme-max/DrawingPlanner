@@ -1,0 +1,546 @@
+.ref-folder-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #17161a;
+  color: #ffffff;
+  box-sizing: border-box;
+}
+
+.ref-folder-header {
+  flex-shrink: 0;
+  padding: 16px 16px 10px;
+  box-sizing: border-box;
+}
+
+.ref-folder-header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ref-folder-back {
+  margin: 0;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.35);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ref-folder-back:focus-visible {
+  outline: 2px solid var(--ww-sub);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.ref-folder-title {
+  margin: 0;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.ref-folder-add {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(45, 212, 191, 0.2);
+  background: rgba(45, 212, 191, 0.1);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #2dd4bf;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ref-folder-add:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 2px;
+}
+
+.ref-folder-file {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ref-folder-tags {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  box-sizing: border-box;
+}
+
+.ref-folder-tags::-webkit-scrollbar {
+  display: none;
+}
+
+.ref-folder-tag {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ref-folder-tag--on {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.3);
+  color: #2dd4bf;
+}
+
+.ref-folder-tag:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 2px;
+}
+
+.ref-folder-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 10px 80px;
+  box-sizing: border-box;
+}
+
+.ref-folder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-items: start;
+}
+
+.ref-folder-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  width: 100%;
+  text-align: left;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  display: block;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ref-folder-card:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 2px;
+}
+
+.ref-folder-card-img-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 72px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ref-folder-card-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.ref-folder-card-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 6px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.ref-folder-card-memo {
+  margin: 0;
+  padding: 6px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.35);
+  word-break: break-word;
+}
+
+.ref-folder-card--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  min-height: 80px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  background: transparent;
+  font-family: 'DM Mono', monospace;
+  font-size: 18px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.ref-folder-nav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 12px 6px calc(18px + env(safe-area-inset-bottom, 0));
+  background: rgba(23, 22, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+}
+
+.ref-folder-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 76px;
+  padding: 2px 2px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.45);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ref-folder-nav-item--active {
+  color: var(--ww-main);
+}
+
+.ref-folder-nav-item:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.ref-folder-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+}
+
+/* —— 태그 모달 —— */
+.ref-folder-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.7);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ref-folder-modal {
+  width: 100%;
+  max-width: 320px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #1e1c20;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+}
+
+.ref-folder-modal-title {
+  margin: 0 0 14px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.ref-folder-modal-tags {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.ref-folder-modal-tag {
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ref-folder-modal-tag--on {
+  border-color: rgba(45, 212, 191, 0.45);
+  background: rgba(45, 212, 191, 0.12);
+  color: #2dd4bf;
+}
+
+.ref-folder-modal-label {
+  display: block;
+  margin: 0 0 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.04em;
+}
+
+.ref-folder-modal-input {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  outline: none;
+}
+
+.ref-folder-modal-input:focus {
+  border-color: rgba(45, 212, 191, 0.35);
+}
+
+.ref-folder-modal-save {
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #2dd4bf;
+  color: #17161a;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.ref-folder-modal-save:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.ref-folder-modal-cancel {
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 8px;
+  border: none;
+  background: none;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+}
+
+/* —— 전체화면 뷰어 —— */
+.ref-folder-viewer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #0d0c0f;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.ref-folder-viewer-head {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  box-sizing: border-box;
+}
+
+.ref-folder-viewer-back {
+  margin: 0;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ref-folder-viewer-tag {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+.ref-folder-viewer-img-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  max-height: 60vh;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.ref-folder-viewer-img {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.ref-folder-viewer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.ref-folder-viewer-label {
+  margin: 0 0 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.05em;
+}
+
+.ref-folder-viewer-memo {
+  width: 100%;
+  min-height: 72px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+
+.ref-folder-viewer-memo:focus {
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+.ref-folder-viewer-date {
+  margin: 0 0 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.ref-folder-viewer-tag-row {
+  margin-top: 4px;
+}
+
+.ref-folder-viewer-tag-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ref-folder-viewer-chip {
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+}
+
+.ref-folder-viewer-chip--current {
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.08);
+}
+
+.ref-folder-viewer-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

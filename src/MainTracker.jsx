@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import {
   applyGoalDisplayBreaks,
@@ -6,39 +6,121 @@ import {
   splitGoalHeaderParagraphs,
 } from './goalConfig.js'
 import BrandWordmark from './BrandWordmark'
+import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import PlusIcon from './PlusIcon'
+import { readCarryProcessedYm, writeCarryProcessedYm } from './trackerPersistence.js'
+import { prevYm, ymFromDate } from './trackerMonth.js'
 import './MainTracker.css'
 
-const SAMPLE_CARDS = [
-  {
-    id: '1',
-    displayTag: '메인 일러스트',
-    title: '메인 일러스트',
-    percent: 60,
-    accent: 'orange',
-  },
-  {
-    id: '2',
-    displayTag: '전신/반신',
-    title: '전신/반신',
-    percent: 40,
-    accent: 'teal',
-  },
-  {
-    id: '3',
-    displayTag: 'UI 디자인',
-    title: 'UI 디자인',
-    percent: 20,
-    accent: 'orange',
-  },
-]
+/**
+ * @param {unknown[]} prevCards
+ * @param {string} currentYm
+ */
+function applyCarryOver(prevCards, currentYm) {
+  const p = prevYm(currentYm)
+  const incomplete = prevCards.filter((c) => c.activeMonthYm === p && c.percent < 100)
+  if (incomplete.length === 0) return prevCards
+  const nowTs = Date.now()
+  const additions = incomplete.map((c, i) => ({
+    ...c,
+    id: `co-${c.id}-${currentYm}-${nowTs}-${i}`,
+    isCarryOver: true,
+    isKeyCard: false,
+    carriedFromYm: p,
+    activeMonthYm: currentYm,
+    barIntroNonce: nowTs + i * 0.001,
+  }))
+  const kept = prevCards.filter((c) => !(c.activeMonthYm === p && c.percent < 100))
+  return [...kept, ...additions]
+}
+
+/**
+ * 저장 배열 순서 기준, 이번 달에 해당하는 첫 카드 id (이월이면 그다음 일반 카드)
+ * @param {unknown[]} cards
+ * @param {string[]} monthlyGoals
+ * @returns {string | null}
+ */
+function resolveKeyCardId(cards, monthlyGoals) {
+  const now = new Date()
+  const currentYm = ymFromDate(now)
+  const mi = now.getMonth()
+  const keyText = (monthlyGoals[mi] ?? '').trim()
+  if (!keyText) return null
+  const firstInStorage = cards.find((c) => c.activeMonthYm === currentYm)
+  if (!firstInStorage) return null
+  if (!firstInStorage.isCarryOver) return firstInStorage.id
+  const pool = cards.filter((c) => c.activeMonthYm === currentYm)
+  const fallback = pool.find((c) => !c.isCarryOver)
+  return fallback?.id ?? null
+}
+
+/**
+ * @param {unknown[]} cards
+ * @param {string[]} monthlyGoals
+ * @returns {{ card: Record<string, unknown>; kind: 'key' | 'carry' | 'normal'; keyGoalText?: string }[]}
+ */
+function buildTrackerDisplayEntries(cards, monthlyGoals) {
+  const now = new Date()
+  const currentYm = ymFromDate(now)
+  const mi = now.getMonth()
+  const keyText = (monthlyGoals[mi] ?? '').trim()
+  const keyId = resolveKeyCardId(cards, monthlyGoals)
+
+  const pool = cards.filter((c) => c.activeMonthYm === currentYm)
+  const orderIndex = (id) => {
+    const i = cards.findIndex((c) => c.id === id)
+    return i === -1 ? 9999 : i
+  }
+
+  const keyCard = keyId ? cards.find((c) => c.id === keyId) ?? null : null
+
+  const carries = [...pool.filter((c) => c.isCarryOver)].sort(
+    (a, b) => orderIndex(a.id) - orderIndex(b.id),
+  )
+  const rest = [...pool.filter((c) => {
+    if (keyCard && c.id === keyCard.id) return false
+    if (c.isCarryOver) return false
+    return true
+  })].sort((a, b) => orderIndex(a.id) - orderIndex(b.id))
+
+  /** @type {{ card: Record<string, unknown>; kind: 'key' | 'carry' | 'normal'; keyGoalText?: string }[]} */
+  const entries = []
+  if (keyCard) entries.push({ card: keyCard, kind: 'key', keyGoalText: keyText })
+  for (const c of carries) entries.push({ card: c, kind: 'carry' })
+  for (const c of rest) entries.push({ card: c, kind: 'normal' })
+  return entries
+}
 
 const STAGES = [
   { id: 's1', label: '스케치' },
   { id: 's2', label: '라인' },
   { id: 's3', label: '색' },
-  { id: 's4', label: '완성' },
 ]
+
+const STAGE_TOTAL = STAGES.length
+
+/** @param {Record<string, unknown>} card @param {{ id: string; label: string }} stageDef */
+function getStageLabel(card, stageDef) {
+  const sl = card.stageLabels
+  if (sl && typeof sl === 'object' && !Array.isArray(sl)) {
+    const v = sl[stageDef.id]
+    if (typeof v === 'string' && v.trim()) return v
+  }
+  return stageDef.label
+}
+
+/** @param {string} cardId @param {Record<string, boolean>} stageDone @param {Record<string, unknown>} card */
+function countCheckedStages(cardId, stageDone, card) {
+  if (card.workFinalized) return STAGE_TOTAL
+  return STAGES.filter((st) => stageDone[`${cardId}-${st.id}`]).length
+}
+
+/** @param {Record<string, unknown>} card @param {Record<string, boolean>} stageDone */
+function cardProgressPercent(card, stageDone) {
+  if (card.workFinalized) return 100
+  const n = STAGES.filter((st) => stageDone[`${card.id}-${st.id}`]).length
+  return Math.round((n / STAGE_TOTAL) * 100)
+}
 
 function formatYmd(d) {
   const y = d.getFullYear()
@@ -47,69 +129,352 @@ function formatYmd(d) {
   return `${y}/${m}/${day}`
 }
 
-/** 상단·카드 가로 바 채움 시간 — % 숫자 카운트와 동기 */
+/** 카드 헤더 인트로(틱 변경 시) — % 숫자·바와 동기 */
 const MT_HEADER_BAR_MS = 980
+/** 스테이지 토글·완성 확정 시 바·숫자 동기 */
+const MT_LIVE_BAR_MS = 400
 
-function CardHeadProgress({ displayTag, targetPct, accent, replayKey, introNonce }) {
-  const [barActive, setBarActive] = useState(false)
-  const [pctDisplay, setPctDisplay] = useState(0)
+/** @param {{ displayTag: string; targetPct: number; cardKind: 'normal' | 'key' | 'carry'; replayKey: number; introNonce: number; barSubTone?: boolean }} props */
+function CardHeadProgress({ displayTag, targetPct, cardKind, replayKey, introNonce, barSubTone = false }) {
   const tickKey = `${replayKey}-${introNonce}`
+  const [barOn, setBarOn] = useState(false)
+  const [pctDisplay, setPctDisplay] = useState(0)
+  const [barMs, setBarMs] = useState(MT_HEADER_BAR_MS)
+  const [barEasing, setBarEasing] = useState('cubic-bezier(0.22, 1, 0.36, 1)')
+  const prevTickKeyRef = useRef(null)
+  const pctDisplayRef = useRef(0)
+  pctDisplayRef.current = pctDisplay
 
   useEffect(() => {
-    setBarActive(false)
-    setPctDisplay(0)
-    let id2 = 0
-    const id1 = requestAnimationFrame(() => {
-      id2 = requestAnimationFrame(() => setBarActive(true))
-    })
-    return () => {
-      cancelAnimationFrame(id1)
-      cancelAnimationFrame(id2)
-    }
-  }, [tickKey])
+    const tickChanged = prevTickKeyRef.current !== tickKey
+    prevTickKeyRef.current = tickKey
 
-  useEffect(() => {
-    if (!barActive) return
+    const easeOut = (x) => 1 - (1 - x) ** 2
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    if (reduced) {
-      setPctDisplay(targetPct)
+    const from = tickChanged ? 0 : pctDisplayRef.current
+    const to = targetPct
+    const dur = tickChanged ? MT_HEADER_BAR_MS : MT_LIVE_BAR_MS
+
+    if (!tickChanged && from === to) {
+      setBarOn(true)
+      setPctDisplay(to)
       return
     }
-    let cancelled = false
-    const target = targetPct
-    const duration = MT_HEADER_BAR_MS
-    const t0 = performance.now()
-    const easeOut = (x) => 1 - (1 - x) ** 2
-    let raf = 0
-    const tick = (now) => {
-      if (cancelled) return
-      const t = Math.min(1, (now - t0) / duration)
-      setPctDisplay(Math.round(easeOut(t) * target))
-      if (t < 1) raf = requestAnimationFrame(tick)
+
+    setBarMs(dur)
+    setBarEasing(tickChanged ? 'cubic-bezier(0.22, 1, 0.36, 1)' : 'ease-out')
+
+    if (reduced) {
+      setPctDisplay(to)
+      if (tickChanged) {
+        setBarOn(false)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setBarOn(true))
+        })
+      } else {
+        setBarOn(true)
+      }
+      return
     }
-    raf = requestAnimationFrame(tick)
+
+    let cancelled = false
+    let raf = 0
+
+    const runNumberAnim = () => {
+      const t0 = performance.now()
+      const step = (now) => {
+        if (cancelled) return
+        const t = Math.min(1, (now - t0) / dur)
+        setPctDisplay(Math.round(from + easeOut(t) * (to - from)))
+        if (t < 1) raf = requestAnimationFrame(step)
+      }
+      raf = requestAnimationFrame(step)
+    }
+
+    if (tickChanged) {
+      setBarOn(false)
+      setPctDisplay(0)
+      let id2 = 0
+      const id1 = requestAnimationFrame(() => {
+        id2 = requestAnimationFrame(() => {
+          if (cancelled) return
+          setBarOn(true)
+          runNumberAnim()
+        })
+      })
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(id1)
+        cancelAnimationFrame(id2)
+        cancelAnimationFrame(raf)
+      }
+    }
+
+    setBarOn(true)
+    runNumberAnim()
     return () => {
       cancelled = true
       cancelAnimationFrame(raf)
     }
-  }, [barActive, targetPct])
+  }, [tickKey, targetPct])
 
-  const fillClass =
-    accent === 'teal' ? 'mt-card-bar-fill mt-card-bar-fill--teal' : 'mt-card-bar-fill'
+  let fillClass =
+    cardKind === 'normal'
+      ? 'mt-card-bar-fill'
+      : cardKind === 'carry'
+        ? 'mt-card-bar-fill mt-card-bar-fill--carry'
+        : 'mt-card-bar-fill mt-card-bar-fill--key'
+  if (cardKind === 'normal' && barSubTone) {
+    fillClass = `${fillClass} mt-card-bar-fill--teal`
+  }
 
   return (
     <>
       <div className="mt-card-row">
-        <span className="mt-card-tag">{displayTag}</span>
+        <span className="mt-card-tag-cluster">
+          {cardKind === 'key' ? (
+            <span className="mt-card-badge mt-card-badge--key" aria-hidden>
+              이달의 핵심
+            </span>
+          ) : null}
+          <span className="mt-card-tag">{displayTag}</span>
+          {cardKind === 'carry' ? (
+            <span className="mt-card-badge mt-card-badge--carry" aria-hidden>
+              ↩ 이월
+            </span>
+          ) : null}
+        </span>
         <span className="mt-card-pct">{pctDisplay}%</span>
       </div>
       <div className="mt-card-bar">
         <div
-          className={`${fillClass}${barActive ? ' mt-card-bar-fill--active' : ''}`}
-          style={{ '--mt-card-target-pct': `${targetPct}%` }}
+          className={`${fillClass}${barOn ? ' mt-card-bar-fill--active' : ''}`}
+          style={{
+            '--mt-card-target-pct': `${targetPct}%`,
+            transition: `width ${barMs}ms ${barEasing}`,
+          }}
         />
       </div>
     </>
+  )
+}
+
+/**
+ * @param {{ workTitle: string; title?: string; displayTag?: string }} card
+ * @param {{ workTitle: string }} f
+ */
+function feedbackMatchesTrackerCard(card, f) {
+  const wt = f.workTitle
+  if (!wt) return false
+  if (wt === card.title) return true
+  if (wt === card.displayTag) return true
+  return false
+}
+
+function FeedbackExportIcon({ className = '' }) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15 3h6v6M10 14L21 3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+const FB_SWIPE_REMOVE_PX = 84
+const FB_SWIPE_MAX_DRAG = 140
+const FB_SWIPE_SLOP = 14
+
+/**
+ * @param {{
+ *   card: Record<string, unknown>
+ *   onRemove?: (id: number) => void
+ *   onToggleConfirmed?: (id: number) => void
+ *   onPreviewImage?: (url: string, feedbackText: string) => void
+ * }} props
+ */
+function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage }) {
+  const work = typeof card.workTitle === 'string' && card.workTitle.trim() ? card.workTitle.trim() : '작업'
+  const title = `Self Feedback - ${work}`
+  const id = typeof card.id === 'number' ? card.id : Number(card.id)
+  const previewUrl = typeof card.previewImageUrl === 'string' ? card.previewImageUrl : ''
+  const hasPreview = Boolean(previewUrl)
+  const feedbackText = typeof card.text === 'string' ? card.text : ''
+  const confirmed = Boolean(card.confirmed)
+
+  const [translateX, setTranslateX] = useState(0)
+  const [surfaceTransition, setSurfaceTransition] = useState(false)
+  const translateXRef = useRef(0)
+  const gestureRef = useRef({
+    startX: 0,
+    startY: 0,
+    active: false,
+    horizontal: false,
+  })
+
+  const setTx = (x) => {
+    translateXRef.current = x
+    setTranslateX(x)
+  }
+
+  const resetGestureRef = () => {
+    gestureRef.current = { startX: 0, startY: 0, active: false, horizontal: false }
+  }
+
+  useEffect(() => {
+    if (!confirmed) {
+      translateXRef.current = 0
+      setTranslateX(0)
+      setSurfaceTransition(false)
+      resetGestureRef()
+    }
+  }, [confirmed])
+
+  const onTouchStart = (e) => {
+    if (!confirmed) return
+    const t = e.touches[0]
+    if (!t) return
+    gestureRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      active: true,
+      horizontal: false,
+    }
+    setSurfaceTransition(false)
+  }
+
+  const onTouchMove = (e) => {
+    if (!confirmed || !gestureRef.current.active) return
+    const t = e.touches[0]
+    if (!t) return
+    const dx = t.clientX - gestureRef.current.startX
+    const dy = t.clientY - gestureRef.current.startY
+
+    if (!gestureRef.current.horizontal) {
+      if (Math.abs(dx) >= FB_SWIPE_SLOP && Math.abs(dx) > Math.abs(dy) * 1.12) {
+        gestureRef.current.horizontal = true
+      } else if (Math.abs(dy) >= FB_SWIPE_SLOP && Math.abs(dy) >= Math.abs(dx)) {
+        gestureRef.current.active = false
+        return
+      } else {
+        return
+      }
+    }
+
+    if (dx <= 0) {
+      setTx(Math.max(dx, -FB_SWIPE_MAX_DRAG))
+    } else {
+      setTx(Math.min(dx * 0.4, 0))
+    }
+  }
+
+  const finishSwipe = () => {
+    if (!confirmed) return
+    const was = gestureRef.current
+    resetGestureRef()
+
+    if (!was.active || !was.horizontal) {
+      if (translateXRef.current !== 0) {
+        setSurfaceTransition(true)
+        setTx(0)
+        window.setTimeout(() => setSurfaceTransition(false), 220)
+      }
+      return
+    }
+
+    const x = translateXRef.current
+    if (x <= -FB_SWIPE_REMOVE_PX && Number.isFinite(id)) {
+      onRemove?.(id)
+      setTx(0)
+      return
+    }
+    setSurfaceTransition(true)
+    setTx(0)
+    window.setTimeout(() => setSurfaceTransition(false), 220)
+  }
+
+  const surfaceStyle = {
+    transform: `translateX(${translateX}px)`,
+    transition: surfaceTransition ? 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)' : undefined,
+  }
+
+  return (
+    <div
+      className={`mt-feedback-card-wrap${confirmed ? ' mt-feedback-card-wrap--swipeable' : ''}`}
+      role="status"
+      aria-label={confirmed ? '메인 등록됨. 왼쪽으로 밀면 삭제돼요.' : undefined}
+    >
+      <div
+        className={`mt-feedback-card${confirmed ? ' mt-feedback-card--main' : ''} mt-feedback-card--surface`}
+        style={surfaceStyle}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={finishSwipe}
+        onTouchCancel={finishSwipe}
+      >
+        <div className="mt-feedback-card__bar" aria-hidden />
+        <div className="mt-feedback-card__inner">
+          <div className="mt-feedback-card__row">
+            <span className="mt-feedback-card__title">{title}</span>
+            <span className="mt-feedback-card__date">{card.date}</span>
+          </div>
+          <p className="mt-feedback-card__text">{card.text}</p>
+          <div className="mt-feedback-card__actions">
+            <button
+              type="button"
+              className="mt-feedback-card__icon-btn mt-feedback-card__export-btn"
+              disabled={!hasPreview}
+              aria-label="연결된 갤러리 이미지 보기"
+              onClick={() => {
+                if (hasPreview) onPreviewImage?.(previewUrl, feedbackText)
+              }}
+            >
+              <FeedbackExportIcon className="mt-feedback-card__export-svg" />
+            </button>
+            <button
+              type="button"
+              className="mt-feedback-card__icon-btn mt-feedback-card__check-btn"
+              aria-pressed={confirmed}
+              aria-label={confirmed ? '강조 해제' : '메인 톤으로 강조'}
+              onClick={() => {
+                if (Number.isFinite(id)) onToggleConfirmed?.(id)
+              }}
+            >
+              ✓
+            </button>
+            <button
+              type="button"
+              className="mt-feedback-card__icon-btn mt-feedback-card__dismiss-btn"
+              aria-label="피드백 삭제"
+              onClick={() => {
+                if (Number.isFinite(id)) onRemove?.(id)
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -125,23 +490,105 @@ function MainTracker({
   onDismissGoal1yTip,
   goal1yValue = '',
   onGoal1yChange,
+  monthlyGoals = Array.from({ length: 12 }, () => ''),
+  trackerCards = [],
+  onTrackerCardsChange = () => {},
+  feedbackCards = [],
+  onRemoveFeedbackCard,
+  onToggleFeedbackCardConfirmed,
 }) {
-  const [cards, setCards] = useState(() =>
-    SAMPLE_CARDS.map((c) => ({ ...c, barIntroNonce: 0 })),
+  const [expandedId, setExpandedId] = useState(
+    () => trackerCards[0]?.id ?? '1',
   )
-  const [expandedId, setExpandedId] = useState('1')
   const [cardImages, setCardImages] = useState({})
   const [stageDone, setStageDone] = useState({})
+  const stageDoneRef = useRef(stageDone)
+  stageDoneRef.current = stageDone
+  const prevStageFillCountRef = useRef({})
+  const [completeBtnGlowOnce, setCompleteBtnGlowOnce] = useState({})
   const [hdrBarActive, setHdrBarActive] = useState(false)
   const [hdrPctDisplay, setHdrPctDisplay] = useState(0)
   const [gallerySentOpen, setGallerySentOpen] = useState(false)
   const [galleryNeedImagesHint, setGalleryNeedImagesHint] = useState(false)
+  const [feedbackPreview, setFeedbackPreview] = useState(
+    /** @type {{ src: string; text: string } | null} */ (null),
+  )
+  const [editingStageId, setEditingStageId] = useState(/** @type {string | null} */ (null))
+  const [stageLabelDraft, setStageLabelDraft] = useState('')
   const fileInputRef = useRef(null)
   const pendingCardIdRef = useRef(null)
   const gallerySentTimerRef = useRef(0)
   const galleryNeedImagesTimerRef = useRef(0)
 
   const overallPct = 64
+
+  const displayEntries = useMemo(
+    () => buildTrackerDisplayEntries(trackerCards, monthlyGoals),
+    [trackerCards, monthlyGoals],
+  )
+
+  useEffect(() => {
+    for (const card of trackerCards) {
+      const n = countCheckedStages(card.id, stageDone, card)
+      const cid = card.id
+      const prev = prevStageFillCountRef.current[cid]
+      if (prev === undefined) {
+        prevStageFillCountRef.current[cid] = n
+        continue
+      }
+      if (n === STAGE_TOTAL && !card.workFinalized && prev < STAGE_TOTAL) {
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+        if (!reduced) {
+          setCompleteBtnGlowOnce((g) => ({ ...g, [cid]: true }))
+        }
+      }
+      prevStageFillCountRef.current[cid] = n
+    }
+  }, [trackerCards, stageDone])
+
+  /** monthlyGoals / 카드 변경 시 `isKeyCard` 한 장만 true 로 동기화 */
+  useEffect(() => {
+    const keyId = resolveKeyCardId(trackerCards, monthlyGoals)
+    const mismatch = trackerCards.some(
+      (c) => Boolean(c.isKeyCard) !== (keyId != null && c.id === keyId),
+    )
+    if (!mismatch) return
+    onTrackerCardsChange((prev) =>
+      prev.map((c) => ({ ...c, isKeyCard: keyId != null && c.id === keyId })),
+    )
+  }, [trackerCards, monthlyGoals, onTrackerCardsChange])
+
+  useEffect(() => {
+    const currentYm = ymFromDate(new Date())
+    const last = readCarryProcessedYm()
+    if (!last) {
+      writeCarryProcessedYm(currentYm)
+      return
+    }
+    if (last >= currentYm) return
+    onTrackerCardsChange((prev) => applyCarryOver(prev, currentYm))
+    writeCarryProcessedYm(currentYm)
+  }, [onTrackerCardsChange])
+
+  useEffect(() => {
+    if (displayEntries.length === 0) return
+    if (!displayEntries.some((e) => e.card.id === expandedId)) {
+      setExpandedId(displayEntries[0].card.id)
+    }
+  }, [displayEntries, expandedId])
+
+  useEffect(() => {
+    setEditingStageId(null)
+  }, [expandedId])
+
+  useEffect(() => {
+    if (!feedbackPreview) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setFeedbackPreview(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [feedbackPreview])
 
   useEffect(() => {
     setHdrBarActive(false)
@@ -233,8 +680,10 @@ function MainTracker({
   }
 
   const addNewCard = () => {
-    setCards((prev) => {
+    const ym = ymFromDate(new Date())
+    onTrackerCardsChange((prev) => {
       const nonce = Date.now() + Math.random()
+      const sameMonth = prev.filter((c) => c.activeMonthYm === ym).length
       return [
         ...prev,
         {
@@ -242,8 +691,12 @@ function MainTracker({
           displayTag: '새 작업',
           title: '새 작업',
           percent: 0,
-          accent: prev.length % 2 === 0 ? 'orange' : 'teal',
+          accent: sameMonth % 2 === 0 ? 'orange' : 'teal',
           barIntroNonce: nonce,
+          activeMonthYm: ym,
+          isKeyCard: false,
+          isCarryOver: false,
+          workFinalized: false,
         },
       ]
     })
@@ -268,9 +721,92 @@ function MainTracker({
     pendingCardIdRef.current = null
   }
 
-  const toggleStage = (cardId, stageId) => {
+  const saveStageLabelFromDraft = (card, st) => {
+    const trimmed = stageLabelDraft.trim()
+    onTrackerCardsChange((prev) =>
+      prev.map((c) => {
+        if (c.id !== card.id) return c
+        const prevSl =
+          c.stageLabels && typeof c.stageLabels === 'object' && !Array.isArray(c.stageLabels)
+            ? { ...c.stageLabels }
+            : {}
+        if (trimmed === '' || trimmed === st.label) {
+          delete prevSl[st.id]
+        } else {
+          prevSl[st.id] = trimmed
+        }
+        const hasAny = Object.keys(prevSl).length > 0
+        return { ...c, stageLabels: hasAny ? prevSl : undefined }
+      }),
+    )
+    setEditingStageId(null)
+  }
+
+  const toggleStage = (cardId, stageId, card) => {
     const key = `${cardId}-${stageId}`
-    setStageDone((prev) => ({ ...prev, [key]: !prev[key] }))
+    const prev = stageDoneRef.current
+
+    if (card.workFinalized) {
+      const nextDone = { ...prev }
+      for (const st of STAGES) {
+        nextDone[`${cardId}-${st.id}`] = true
+      }
+      nextDone[key] = false
+      setStageDone(nextDone)
+      const n = STAGES.filter((st) => nextDone[`${cardId}-${st.id}`]).length
+      const pct = Math.round((n / STAGE_TOTAL) * 100)
+      onTrackerCardsChange((cards) =>
+        cards.map((c) =>
+          c.id === cardId ? { ...c, workFinalized: false, percent: pct } : c,
+        ),
+      )
+      return
+    }
+
+    const nextDone = { ...prev, [key]: !prev[key] }
+    setStageDone(nextDone)
+    const n = STAGES.filter((st) => nextDone[`${cardId}-${st.id}`]).length
+    const pct = Math.round((n / STAGE_TOTAL) * 100)
+    onTrackerCardsChange((cards) =>
+      cards.map((c) => (c.id === cardId ? { ...c, percent: pct } : c)),
+    )
+  }
+
+  const finalizeWork = (cardId) => {
+    const card = trackerCards.find((c) => c.id === cardId)
+    if (!card || card.workFinalized) return
+    setStageDone((prev) => {
+      const next = { ...prev }
+      for (const st of STAGES) {
+        next[`${cardId}-${st.id}`] = true
+      }
+      return next
+    })
+    onTrackerCardsChange((prev) =>
+      prev.map((c) =>
+        c.id === cardId ? { ...c, percent: 100, workFinalized: true } : c,
+      ),
+    )
+  }
+
+  const unfinalizeWork = (cardId) => {
+    const card = trackerCards.find((c) => c.id === cardId)
+    if (!card?.workFinalized) return
+    let n = STAGES.filter((st) => stageDoneRef.current[`${cardId}-${st.id}`]).length
+    if (n === 0 && card.percent >= 100) n = STAGE_TOTAL
+    const pct = Math.round((n / STAGE_TOTAL) * 100)
+    onTrackerCardsChange((prev) =>
+      prev.map((c) =>
+        c.id === cardId ? { ...c, workFinalized: false, percent: pct } : c,
+      ),
+    )
+  }
+
+  const toggleCompleteWork = (cardId) => {
+    const card = trackerCards.find((c) => c.id === cardId)
+    if (!card) return
+    if (card.workFinalized) unfinalizeWork(cardId)
+    else finalizeWork(cardId)
   }
 
   const sendToGallery = (card) => {
@@ -280,6 +816,7 @@ function MainTracker({
     const iso = now.toISOString()
     const month = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`
     const base = now.getTime()
+    const workTitle = typeof card.title === 'string' && card.title ? card.title : card.displayTag
     urls.forEach((url, i) => {
       onAddGalleryItem({
         id: `${card.id}-${base}-${i}`,
@@ -288,6 +825,8 @@ function MainTracker({
         grouped: false,
         finalImageIndex: 0,
         createdAt: base + i,
+        workTitle: typeof workTitle === 'string' ? workTitle : '작업',
+        sourceCardId: card.id,
       })
     })
     setCardImages((prev) => ({ ...prev, [card.id]: [] }))
@@ -330,6 +869,33 @@ function MainTracker({
             <button type="button" className="mt-sent-ok" onClick={closeGallerySentDialog}>
               확인
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {feedbackPreview ? (
+        <div
+          className="mt-feedback-preview-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="갤러리 이미지 미리보기"
+          onClick={() => setFeedbackPreview(null)}
+        >
+          <div
+            className="mt-feedback-preview-panel"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src={feedbackPreview.src} alt="" className="mt-feedback-preview-img" draggable={false} />
+            <button
+              type="button"
+              className="mt-feedback-preview-close"
+              onClick={() => setFeedbackPreview(null)}
+            >
+              닫기
+            </button>
+            {feedbackPreview.text.trim() ? (
+              <p className="mt-feedback-preview-caption">{feedbackPreview.text}</p>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -406,15 +972,20 @@ function MainTracker({
       ) : null}
 
       <main className="mt-scroll">
-        {cards.map((card) => {
+        {displayEntries.flatMap(({ card, kind, keyGoalText }) => {
           const expanded = expandedId === card.id
           const urls = cardImages[card.id] || []
+          const stageFillCount = countCheckedStages(card.id, stageDone, card)
+          const completeBtnReady = stageFillCount === STAGE_TOTAL && !card.workFinalized
+          const cardFeedbacks = feedbackCards.filter((f) => feedbackMatchesTrackerCard(card, f))
 
-          return (
+          const article = (
             <article
               key={card.id}
-              className={`mt-card ${expanded ? 'mt-card--open' : ''}`}
+              className={`mt-card mt-card--${kind} ${expanded ? 'mt-card--open' : ''}`}
               data-accent={card.accent}
+              data-card-type={kind}
+              data-key-card={card.isKeyCard ? 'true' : undefined}
             >
               <button
                 type="button"
@@ -423,31 +994,110 @@ function MainTracker({
               >
                 <CardHeadProgress
                   displayTag={card.displayTag}
-                  targetPct={card.percent}
-                  accent={card.accent}
+                  targetPct={cardProgressPercent(card, stageDone)}
+                  cardKind={kind}
                   replayKey={trackerBarReplayKey}
                   introNonce={card.barIntroNonce ?? 0}
+                  barSubTone={kind === 'normal' && Boolean(card.workFinalized)}
                 />
               </button>
 
               {expanded && (
                 <div className="mt-card-detail">
-                  {features.selfFeedback
-                    ? STAGES.map((st) => {
-                        const done = stageDone[`${card.id}-${st.id}`]
+                  {kind === 'key' && keyGoalText ? (
+                    <p className="mt-card-monthly-goal">이달의 목표: {keyGoalText}</p>
+                  ) : null}
+                  {features.selfFeedback ? (
+                    <div className="mt-stages">
+                      {STAGES.map((st) => {
+                        const done =
+                          Boolean(card.workFinalized) ||
+                          Boolean(stageDone[`${card.id}-${st.id}`])
+                        const sealed = Boolean(card.workFinalized)
+                        const mainStageDone = done && !sealed && kind === 'normal'
                         return (
-                          <div key={st.id} className={`mt-detail-row${done ? ' mt-detail-row--done' : ''}`}>
+                          <div
+                            key={st.id}
+                            className={`mt-detail-row${done ? ' mt-detail-row--done' : ''}${sealed && done ? ' mt-detail-row--sealed' : ''}`}
+                          >
                             <button
                               type="button"
-                              className={`mt-check ${done ? 'mt-check--on' : ''}`}
-                              onClick={() => toggleStage(card.id, st.id)}
+                              className={`mt-check ${done ? 'mt-check--on' : ''}${sealed ? ' mt-check--sealed' : ''}${mainStageDone ? ' mt-check--stage-main' : ''}`}
+                              onClick={() => toggleStage(card.id, st.id, card)}
                               aria-pressed={done}
                             />
-                            <span className="mt-detail-label">{st.label}</span>
+                            {editingStageId === st.id && expandedId === card.id ? (
+                              <input
+                                type="text"
+                                className="mt-detail-stage-input"
+                                value={stageLabelDraft}
+                                autoFocus
+                                onChange={(e) => setStageLabelDraft(e.target.value)}
+                                onBlur={() => saveStageLabelFromDraft(card, st)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') e.currentTarget.blur()
+                                }}
+                                aria-label={`${st.label} 단계 이름`}
+                              />
+                            ) : (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                className="mt-detail-stage-text"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setStageLabelDraft(getStageLabel(card, st))
+                                  setEditingStageId(st.id)
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    setStageLabelDraft(getStageLabel(card, st))
+                                    setEditingStageId(st.id)
+                                  }
+                                }}
+                              >
+                                {getStageLabel(card, st)}
+                              </span>
+                            )}
                           </div>
                         )
-                      })
-                    : null}
+                      })}
+                      <div
+                        className={`mt-complete-block${completeBtnReady ? ' mt-complete-block--ready' : ''}`}
+                      >
+                        <span className="mt-complete-counter">
+                          완성 ({stageFillCount}/{STAGE_TOTAL})
+                        </span>
+                        <button
+                          type="button"
+                          className={`mt-complete-btn${card.workFinalized ? ' mt-complete-btn--on' : ''}${
+                            completeBtnReady ? ' mt-complete-btn--ready' : ''
+                          }`}
+                          onClick={() => toggleCompleteWork(card.id)}
+                          aria-pressed={Boolean(card.workFinalized)}
+                        >
+                          {completeBtnGlowOnce[card.id] ? (
+                            <span
+                              className="mt-complete-btn-shimmer"
+                              aria-hidden
+                              onAnimationEnd={(e) => {
+                                if (!e.animationName.includes('mt-complete-shimmer')) return
+                                setCompleteBtnGlowOnce((g) =>
+                                  g[card.id] ? { ...g, [card.id]: false } : g,
+                                )
+                              }}
+                            />
+                          ) : null}
+                          <span className="mt-complete-btn-text">
+                            {card.workFinalized
+                              ? `✓ 완성 (${stageFillCount}/${STAGE_TOTAL})`
+                              : `완성 (${stageFillCount}/${STAGE_TOTAL})`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
 
                   {features.imageUploadSlot ? (
                     <div className="mt-slots">
@@ -483,17 +1133,33 @@ function MainTracker({
                   {features.gallery ? (
                     <button
                       type="button"
-                      className={`mt-gallery-send${urls.length === 0 ? ' mt-gallery-send--empty' : ''}`}
+                      className={`mt-gallery-send${urls.length === 0 && !card.workFinalized ? ' mt-gallery-send--empty' : ''}`}
                       onClick={() => onGallerySendClick(card)}
-                      aria-disabled={urls.length === 0}
+                      aria-disabled={urls.length === 0 && !card.workFinalized}
                     >
-                      ✓ 완성했어요 — 갤러리에 담기
+                      갤러리로 보내기
                     </button>
                   ) : null}
                 </div>
               )}
             </article>
           )
+
+          if (cardFeedbacks.length === 0) return [article]
+          return [
+            article,
+            ...cardFeedbacks.map((f) => (
+              <TrackerFeedbackCard
+                key={`fb-${f.id}`}
+                card={f}
+                onRemove={onRemoveFeedbackCard}
+                onToggleConfirmed={onToggleFeedbackCardConfirmed}
+                onPreviewImage={(url, text) =>
+                  setFeedbackPreview({ src: url, text: typeof text === 'string' ? text : '' })
+                }
+              />
+            )),
+          ]
         })}
 
         <button type="button" className="mt-card-add" onClick={addNewCard}>
@@ -503,23 +1169,31 @@ function MainTracker({
 
       <nav className="mt-nav" aria-label="하단 메뉴">
         <button type="button" className="mt-nav-item mt-nav-item--active">
-          <span className="mt-nav-icon" aria-hidden />
+          <span className="mt-nav-icon" aria-hidden>
+            <NavIconTracker />
+          </span>
           트래커
         </button>
         {features.goalScreen ? (
           <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('goal')}>
-            <span className="mt-nav-icon" aria-hidden />
+            <span className="mt-nav-icon" aria-hidden>
+              <NavIconGoal />
+            </span>
             목표
           </button>
         ) : null}
         {features.gallery ? (
           <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('gallery')}>
-            <span className="mt-nav-icon" aria-hidden />
+            <span className="mt-nav-icon" aria-hidden>
+              <NavIconGallery />
+            </span>
             갤러리
           </button>
         ) : null}
         <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('settings')}>
-          <span className="mt-nav-icon" aria-hidden />
+          <span className="mt-nav-icon" aria-hidden>
+            <NavIconSettings />
+          </span>
           설정
         </button>
       </nav>

@@ -423,11 +423,20 @@
 }
 
 .setting-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: currentColor;
+  flex-shrink: 0;
+  color: inherit;
   opacity: 0.95;
+}
+
+.setting-nav-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 .setting-nav-item--active .setting-nav-icon {

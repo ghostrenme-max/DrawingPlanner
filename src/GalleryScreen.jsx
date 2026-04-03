@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
+import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GalleryScreen.css'
 
 const MAX_GALLERY_PINS = 3
@@ -49,6 +50,40 @@ function PinIcon({ className = '' }) {
   )
 }
 
+function TrashIcon({ className = '' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width={20}
+      height={20}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2" />
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  )
+}
+
+/**
+ * @param {NonNullable<ReturnType<typeof normalizeGalleryItem>>} item
+ * @param {{ url: string; date: string }} slotImg
+ */
+const PROMOTE_FINAL_MIME = 'application/x-worthwith-promote-final'
+
+function resolveProcessImageGlobalIndex(item, slotImg) {
+  if (!slotImg) return -1
+  const fi = item.finalImageIndex
+  return item.images.findIndex((g, i) => (fi < 0 || i !== fi) && g.url === slotImg.url && g.date === slotImg.date)
+}
+
 /** 카드 썸네일 좌상단 고정 표시 */
 function GalleryPinCornerBadge({ small = false }) {
   return (
@@ -84,8 +119,31 @@ function GalleryLogoMark() {
 }
 
 /**
+ * @param {unknown[]} trackerCards
+ * @param {string} [sourceCardId]
+ */
+function resolveGalleryFeedbackType(trackerCards, sourceCardId) {
+  if (!sourceCardId || !Array.isArray(trackerCards)) return 'orange'
+  const c = trackerCards.find((tc) => tc && typeof tc === 'object' && tc.id === sourceCardId)
+  if (!c) return 'orange'
+  return c.isCarryOver ? 'teal' : 'orange'
+}
+
+/** 갤러리 상세에서 피드백 미리보기용 대표 이미지 URL */
+function feedbackPreviewUrlFromGalleryItem(item) {
+  if (!item?.images?.length) return ''
+  const fi = item.finalImageIndex
+  if (fi >= 0 && item.images[fi]) {
+    const u = item.images[fi].url
+    return typeof u === 'string' ? u : ''
+  }
+  const u0 = item.images[0]?.url
+  return typeof u0 === 'string' ? u0 : ''
+}
+
+/**
  * @param {unknown} raw
- * @returns {{ id: string; images: { url: string; date: string }[]; grouped: boolean; finalImageIndex: number; month: string; createdAt: number } | null}
+ * @returns {{ id: string; images: { url: string; date: string }[]; grouped: boolean; finalImageIndex: number; month: string; createdAt: number; workTitle?: string; sourceCardId?: string } | null}
  */
 function normalizeGalleryItem(raw) {
   if (!raw || typeof raw !== 'object' || !raw.id) return null
@@ -98,7 +156,13 @@ function normalizeGalleryItem(raw) {
       url: typeof x.url === 'string' ? x.url : '',
       date: typeof x.date === 'string' ? x.date : new Date().toISOString(),
     }))
-    const fi = Math.min(Math.max(0, raw.finalImageIndex ?? 0), list.length - 1)
+    const rawFi = raw.finalImageIndex
+    const fi =
+      rawFi === null || rawFi === undefined || rawFi === -1
+        ? -1
+        : Math.min(Math.max(0, Number(rawFi)), list.length - 1)
+    const workTitle = typeof raw.workTitle === 'string' ? raw.workTitle : ''
+    const sourceCardId = typeof raw.sourceCardId === 'string' ? raw.sourceCardId : ''
     return {
       id: raw.id,
       images: list,
@@ -106,6 +170,8 @@ function normalizeGalleryItem(raw) {
       finalImageIndex: fi,
       month,
       createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+      ...(workTitle ? { workTitle } : {}),
+      ...(sourceCardId ? { sourceCardId } : {}),
     }
   }
 
@@ -153,7 +219,8 @@ function sectionMonthKeyForItem(it) {
   if (normalized && /^\d{4}\.\d{2}$/.test(normalized)) return normalized
   const d = new Date(it.createdAt)
   if (Number.isNaN(d.getTime())) {
-    const f = it.images[it.finalImageIndex]
+    const fi = it.finalImageIndex
+    const f = fi >= 0 ? it.images[fi] : it.images[0]
     const d2 = f?.date ? new Date(f.date) : new Date()
     return `${d2.getFullYear()}.${String(d2.getMonth() + 1).padStart(2, '0')}`
   }
@@ -188,6 +255,8 @@ function mergeTwoItemsById(items, sourceId, targetId) {
   const top = new Date(flat[0].date)
   const month = `${top.getFullYear()}.${String(top.getMonth() + 1).padStart(2, '0')}`
 
+  const wt = (typeof b.workTitle === 'string' && b.workTitle) || (typeof a.workTitle === 'string' && a.workTitle) || ''
+  const sc = (typeof b.sourceCardId === 'string' && b.sourceCardId) || (typeof a.sourceCardId === 'string' && a.sourceCardId) || ''
   const merged = {
     id: `bundle-${Date.now()}`,
     images: flat.map(({ url, date }) => ({ url, date })),
@@ -195,9 +264,61 @@ function mergeTwoItemsById(items, sourceId, targetId) {
     finalImageIndex: 0,
     month,
     createdAt: Date.now(),
+    ...(wt ? { workTitle: wt } : {}),
+    ...(sc ? { sourceCardId: sc } : {}),
   }
 
   return [...items.filter((it) => it.id !== sourceId && it.id !== targetId), merged]
+}
+
+/** @param {{ url: string; date: string }[]} images @param {number} finalIndex -1 이면 전부 과정 */
+function extractProcessImages(images, finalIndex) {
+  if (finalIndex == null || finalIndex < 0) return images.map((img) => ({ ...img }))
+  return images.filter((_, i) => i !== finalIndex).map((img) => ({ ...img }))
+}
+
+/** 완성본 → 과정 맨 아래로 */
+function demoteFinalFromItem(item) {
+  const fi = item.finalImageIndex
+  if (fi == null || fi < 0 || fi >= item.images.length) return item
+  const finalImg = item.images[fi]
+  const rest = item.images.filter((_, i) => i !== fi)
+  return {
+    ...item,
+    images: [...rest, finalImg],
+    finalImageIndex: -1,
+  }
+}
+
+/** 과정 한 장을 완성본(맨 앞)으로 */
+function promoteProcessImageToFinal(item, slotImg) {
+  if (item.finalImageIndex >= 0 || !slotImg) return item
+  const gi = item.images.findIndex((g) => g.url === slotImg.url && g.date === slotImg.date)
+  if (gi < 0) return item
+  const chosen = item.images[gi]
+  const rest = item.images.filter((_, i) => i !== gi)
+  return {
+    ...item,
+    images: [chosen, ...rest],
+    finalImageIndex: 0,
+  }
+}
+
+/**
+ * @param {number} finalIndex
+ * @param {{ url: string; date: string }[]} fullImages
+ * @param {{ url: string; date: string }[]} reorderedProcess
+ */
+function buildImagesFromProcessOrder(finalIndex, fullImages, reorderedProcess) {
+  const finalImg = fullImages[finalIndex]
+  const newLen = reorderedProcess.length + 1
+  const out = []
+  let p = 0
+  for (let i = 0; i < newLen; i++) {
+    if (i === finalIndex) out.push(finalImg)
+    else out.push(reorderedProcess[p++] ?? { url: '', date: new Date().toISOString() })
+  }
+  return out
 }
 
 /**
@@ -210,6 +331,9 @@ function mergeTwoItemsById(items, sourceId, targetId) {
  *   galleryPinnedKeys?: string[]
  *   onToggleGalleryPin?: (pinKey: string) => void
  *   onPruneGalleryPinsForItemIds?: (itemIds: string[]) => void
+ *   trackerCards?: unknown[]
+ *   onAppendFeedbackCard?: (entry: { id: number; text: string; workTitle: string; date: string; type: 'orange' | 'teal'; month: string; previewImageUrl?: string; confirmed?: boolean }) => void
+ *   onOpenReferenceFolder?: () => void
  * }} props
  */
 export default function GalleryScreen({
@@ -221,6 +345,9 @@ export default function GalleryScreen({
   galleryPinnedKeys = [],
   onToggleGalleryPin,
   onPruneGalleryPinsForItemIds,
+  trackerCards = [],
+  onAppendFeedbackCard,
+  onOpenReferenceFolder,
 }) {
   const [lightbox, setLightbox] = useState(
     /** @type {{ src: string; itemId: string; imageIndex: number } | null} */ (null),
@@ -242,6 +369,20 @@ export default function GalleryScreen({
     const d = new Date()
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`
   })
+
+  const [showDetailView, setShowDetailView] = useState(false)
+  const [selectedGroupCard, setSelectedGroupCard] = useState(
+    /** @type {NonNullable<ReturnType<typeof normalizeGalleryItem>> | null} */ (null),
+  )
+  const [detailProcessImages, setDetailProcessImages] = useState(
+    /** @type {{ url: string; date: string }[]} */ ([]),
+  )
+  const [detailEditOrder, setDetailEditOrder] = useState(false)
+  const [detailDragOver, setDetailDragOver] = useState(/** @type {number | null} */ (null))
+  const [detailDragOverFinal, setDetailDragOverFinal] = useState(false)
+  const detailFileInputRef = useRef(/** @type {HTMLInputElement | null} */ (null))
+  const [detailFeedbackDraft, setDetailFeedbackDraft] = useState('')
+  const [feedbackSavedToast, setFeedbackSavedToast] = useState(false)
 
   const pickerMonthKeys = useMemo(() => last12MonthKeysFromDate(), [])
 
@@ -276,6 +417,89 @@ export default function GalleryScreen({
     })
   }, [byMonth, selectedMonthKey, selectedMonthFilter])
 
+  const detailLiveItem = useMemo(
+    () =>
+      selectedGroupCard ? items.find((i) => i.id === selectedGroupCard.id) ?? null : null,
+    [items, selectedGroupCard],
+  )
+
+  const detailIsGrouped = Boolean(detailLiveItem?.grouped)
+
+  const openGalleryDetail = useCallback((item) => {
+    setSelectedGroupCard(item)
+    setDetailProcessImages(extractProcessImages(item.images, item.finalImageIndex))
+    setDetailEditOrder(false)
+    setDetailDragOver(null)
+    setDetailDragOverFinal(false)
+    setShowDetailView(true)
+  }, [])
+
+  const closeGroupDetail = useCallback(() => {
+    setShowDetailView(false)
+    setSelectedGroupCard(null)
+    setDetailEditOrder(false)
+    setDetailDragOver(null)
+    setDetailDragOverFinal(false)
+  }, [])
+
+  const persistDetailProcessImages = useCallback(
+    (nextProcess) => {
+      if (!selectedGroupCard) return
+      const live = items.find((i) => i.id === selectedGroupCard.id)
+      if (!live) return
+      const fi = live.finalImageIndex
+      const newImages =
+        fi == null || fi < 0
+          ? nextProcess.map((x) => ({ ...x }))
+          : buildImagesFromProcessOrder(fi, live.images, nextProcess)
+      onGalleryItemsChange(items.map((it) => (it.id === live.id ? { ...it, images: newImages } : it)))
+    },
+    [items, onGalleryItemsChange, selectedGroupCard],
+  )
+
+  const finishDetailEditOrder = useCallback(() => {
+    persistDetailProcessImages(detailProcessImages)
+    setDetailEditOrder(false)
+    setDetailDragOver(null)
+    setDetailDragOverFinal(false)
+  }, [detailProcessImages, persistDetailProcessImages])
+
+  const handleDemoteFinal = useCallback(() => {
+    if (!detailLiveItem) return
+    const fi = detailLiveItem.finalImageIndex
+    if (fi == null || fi < 0 || !detailLiveItem.images[fi]) return
+    const next = demoteFinalFromItem(detailLiveItem)
+    onGalleryItemsChange(items.map((it) => (it.id === next.id ? next : it)))
+    setDetailEditOrder(false)
+    setDetailDragOver(null)
+    setDetailDragOverFinal(false)
+    setDetailProcessImages(extractProcessImages(next.images, next.finalImageIndex))
+  }, [detailLiveItem, items, onGalleryItemsChange])
+
+  const handlePromoteProcessToFinal = useCallback(
+    (processIdx) => {
+      if (!detailLiveItem || detailLiveItem.finalImageIndex >= 0) return
+      const slotImg = detailProcessImages[processIdx]
+      if (!slotImg) return
+      const next = promoteProcessImageToFinal(detailLiveItem, slotImg)
+      onGalleryItemsChange(items.map((it) => (it.id === next.id ? next : it)))
+      setDetailDragOverFinal(false)
+    },
+    [detailLiveItem, detailProcessImages, items, onGalleryItemsChange],
+  )
+
+  const appendDetailProcessImage = useCallback(
+    (file) => {
+      const url = URL.createObjectURL(file)
+      setDetailProcessImages((prev) => {
+        const next = [...prev, { url, date: new Date().toISOString() }]
+        queueMicrotask(() => persistDetailProcessImages(next))
+        return next
+      })
+    },
+    [persistDetailProcessImages],
+  )
+
   useEffect(() => {
     if (!showMonthPicker) return
     const onKey = (e) => {
@@ -284,6 +508,61 @@ export default function GalleryScreen({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [showMonthPicker])
+
+  useEffect(() => {
+    if (!showDetailView) return
+    const onKey = (e) => {
+      if (e.key === 'Escape' && lightbox == null) closeGroupDetail()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showDetailView, lightbox, closeGroupDetail])
+
+  useEffect(() => {
+    if (showDetailView && selectedGroupCard && !items.some((i) => i.id === selectedGroupCard.id)) {
+      closeGroupDetail()
+    }
+  }, [showDetailView, selectedGroupCard, items, closeGroupDetail])
+
+  useEffect(() => {
+    if (!showDetailView || detailEditOrder || !detailLiveItem) return
+    setDetailProcessImages(extractProcessImages(detailLiveItem.images, detailLiveItem.finalImageIndex))
+  }, [detailLiveItem, showDetailView, detailEditOrder])
+
+  useEffect(() => {
+    if (!selectedGroupCard?.id) return
+    setDetailFeedbackDraft('')
+  }, [selectedGroupCard?.id])
+
+  useEffect(() => {
+    if (!feedbackSavedToast) return
+    const t = window.setTimeout(() => setFeedbackSavedToast(false), 1500)
+    return () => window.clearTimeout(t)
+  }, [feedbackSavedToast])
+
+  const handleSaveDetailFeedback = useCallback(() => {
+    const text = detailFeedbackDraft.trim()
+    if (!text || !onAppendFeedbackCard || !detailLiveItem) return
+    const now = new Date()
+    const dateStr = `${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+    const month = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`
+    const workTitleRaw = detailLiveItem.workTitle
+    const workTitle =
+      typeof workTitleRaw === 'string' && workTitleRaw.trim() ? workTitleRaw.trim() : '갤러리 작업'
+    const type = resolveGalleryFeedbackType(trackerCards, detailLiveItem.sourceCardId)
+    onAppendFeedbackCard({
+      id: Date.now(),
+      text,
+      workTitle,
+      date: dateStr,
+      type,
+      month,
+      previewImageUrl: feedbackPreviewUrlFromGalleryItem(detailLiveItem),
+      confirmed: false,
+    })
+    setDetailFeedbackDraft('')
+    setFeedbackSavedToast(true)
+  }, [detailFeedbackDraft, detailLiveItem, onAppendFeedbackCard, trackerCards])
 
   const endDrag = useCallback(() => {
     setDraggingId(null)
@@ -379,11 +658,318 @@ export default function GalleryScreen({
     showPinLimitToast,
   ])
 
+  const handleLightboxDelete = useCallback(() => {
+    if (!lightbox || !onRemoveGalleryImage) return
+    if (lightboxPinned && onToggleGalleryPin && lightboxPinKey !== '') {
+      onToggleGalleryPin(lightboxPinKey)
+    }
+    onRemoveGalleryImage(lightbox.itemId, lightbox.imageIndex)
+    closeLightbox()
+  }, [
+    lightbox,
+    lightboxPinned,
+    lightboxPinKey,
+    onRemoveGalleryImage,
+    onToggleGalleryPin,
+    closeLightbox,
+  ])
+
   /** 표시할 카드 없음 — galleryItems가 비어 있거나 정규화 후 항목 없음 */
   const isEmpty = items.length === 0
 
   return (
     <div className="gallery-screen">
+      {showDetailView && detailLiveItem ? (
+        <div
+          className="gallery-group-detail"
+          role="dialog"
+          aria-modal="true"
+          aria-label={detailIsGrouped ? '과정샷 상세' : '작업 상세'}
+        >
+          {detailIsGrouped ? (
+            <input
+              ref={detailFileInputRef}
+              type="file"
+              accept="image/*"
+              className="gallery-group-detail-file"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) appendDetailProcessImage(f)
+                e.target.value = ''
+              }}
+            />
+          ) : null}
+          <header className="gallery-group-detail-header">
+            <button type="button" className="gallery-group-detail-back" onClick={closeGroupDetail}>
+              ← 뒤로
+            </button>
+            {detailIsGrouped ? (
+              detailEditOrder ? (
+                <button type="button" className="gallery-group-detail-action" onClick={finishDetailEditOrder}>
+                  완료
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="gallery-group-detail-action"
+                  onClick={() => setDetailEditOrder(true)}
+                >
+                  편집
+                </button>
+              )
+            ) : null}
+          </header>
+          {detailIsGrouped ? (
+            <>
+              <div className="gallery-group-detail-final-block">
+                <div className="gallery-group-detail-final-label-row">
+                  <p className="gallery-group-detail-section-label gallery-group-detail-section-label--final">완성본</p>
+                  {detailLiveItem.finalImageIndex >= 0 &&
+                  detailLiveItem.images[detailLiveItem.finalImageIndex] &&
+                  !detailEditOrder ? (
+                    <button type="button" className="gallery-group-detail-demote-btn" onClick={handleDemoteFinal}>
+                      완성본 내리기
+                    </button>
+                  ) : null}
+                </div>
+                {(() => {
+                  const dfi = detailLiveItem.finalImageIndex
+                  const hasFinal = dfi >= 0 && detailLiveItem.images[dfi]
+                  if (hasFinal) {
+                    const f = detailLiveItem.images[dfi]
+                    return (
+                      <>
+                        {detailEditOrder ? (
+                          <img src={f.url} alt="" className="gallery-group-detail-final-img" draggable={false} />
+                        ) : (
+                          <button
+                            type="button"
+                            className="gallery-group-detail-final-img-btn"
+                            onClick={() => openLightbox(f.url, detailLiveItem.id, dfi)}
+                          >
+                            <img src={f.url} alt="" className="gallery-group-detail-final-img" draggable={false} />
+                          </button>
+                        )}
+                        <p className="gallery-group-detail-final-date">{stampFromDate(f)}</p>
+                      </>
+                    )
+                  }
+                  return (
+                    <div
+                      className={`gallery-group-detail-final-dropzone${
+                        detailDragOverFinal ? ' gallery-group-detail-final-dropzone--active' : ''
+                      }`}
+                      onDragOver={(e) => {
+                        if (detailEditOrder) return
+                        if (!Array.from(e.dataTransfer.types || []).includes(PROMOTE_FINAL_MIME)) return
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'copy'
+                        setDetailDragOverFinal(true)
+                      }}
+                      onDragEnter={(e) => {
+                        if (detailEditOrder) return
+                        if (Array.from(e.dataTransfer.types || []).includes(PROMOTE_FINAL_MIME)) {
+                          e.preventDefault()
+                          setDetailDragOverFinal(true)
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) setDetailDragOverFinal(false)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        setDetailDragOverFinal(false)
+                        if (detailEditOrder) return
+                        const raw = e.dataTransfer.getData(PROMOTE_FINAL_MIME)
+                        const pi = Number.parseInt(raw, 10)
+                        if (!Number.isFinite(pi) || pi < 0) return
+                        handlePromoteProcessToFinal(pi)
+                      }}
+                    >
+                      <span className="gallery-group-detail-final-dropzone-icon" aria-hidden>
+                        +
+                      </span>
+                      <span className="gallery-group-detail-final-dropzone-text">
+                        과정에서 끌어다 놓으면 완성본이 됩니다
+                      </span>
+                    </div>
+                  )
+                })()}
+              </div>
+              <div className="gallery-group-detail-rule" aria-hidden />
+            </>
+          ) : (
+            <>
+              <div className="gallery-group-detail-final-block">
+                <p className="gallery-group-detail-section-label gallery-group-detail-section-label--final">작업</p>
+                {(() => {
+                  const sIdx =
+                    detailLiveItem.finalImageIndex >= 0 &&
+                    detailLiveItem.images[detailLiveItem.finalImageIndex]
+                      ? detailLiveItem.finalImageIndex
+                      : 0
+                  const sh = detailLiveItem.images[sIdx]
+                  if (!sh) return null
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className="gallery-group-detail-final-img-btn"
+                        onClick={() => openLightbox(sh.url, detailLiveItem.id, sIdx)}
+                      >
+                        <img src={sh.url} alt="" className="gallery-group-detail-final-img" draggable={false} />
+                      </button>
+                      <p className="gallery-group-detail-final-date">{stampFromDate(sh)}</p>
+                    </>
+                  )
+                })()}
+              </div>
+              <div className="gallery-group-detail-rule" aria-hidden />
+            </>
+          )}
+          <div className="gallery-group-detail-scroll">
+            {detailIsGrouped ? (
+              <>
+                <p className="gallery-group-detail-section-label gallery-group-detail-section-label--process">과정</p>
+                {detailProcessImages.map((img, idx) => (
+                  <div
+                    key={`${img.url}-${idx}`}
+                    className={`gallery-group-detail-process-item${
+                      detailDragOver === idx ? ' gallery-group-detail-process-item--drop' : ''
+                    }${
+                      !detailEditOrder && detailLiveItem.finalImageIndex < 0
+                        ? ' gallery-group-detail-process-item--promote-source'
+                        : ''
+                    }`}
+                    draggable={detailEditOrder || (!detailEditOrder && detailLiveItem.finalImageIndex < 0)}
+                    onDragStart={(e) => {
+                      if (detailEditOrder) {
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('text/plain', String(idx))
+                        return
+                      }
+                      if (detailLiveItem.finalImageIndex >= 0) return
+                      e.dataTransfer.effectAllowed = 'copy'
+                      e.dataTransfer.setData(PROMOTE_FINAL_MIME, String(idx))
+                    }}
+                    onDragOver={(e) => {
+                      if (!detailEditOrder) return
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = 'move'
+                      setDetailDragOver(idx)
+                    }}
+                    onDragLeave={() => {
+                      setDetailDragOver((v) => (v === idx ? null : v))
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      const from = Number.parseInt(e.dataTransfer.getData('text/plain'), 10)
+                      const to = idx
+                      if (!Number.isFinite(from) || from < 0 || from === to) {
+                        setDetailDragOver(null)
+                        return
+                      }
+                      setDetailProcessImages((prev) => {
+                        if (from >= prev.length || to >= prev.length) return prev
+                        const next = [...prev]
+                        const tmp = next[from]
+                        next[from] = next[to]
+                        next[to] = tmp
+                        return next
+                      })
+                      setDetailDragOver(null)
+                    }}
+                    onDragEnd={() => {
+                      setDetailDragOver(null)
+                      setDetailDragOverFinal(false)
+                    }}
+                  >
+                    {detailEditOrder ? (
+                      <span className="gallery-group-detail-dnd-handle" aria-hidden>
+                        ⠿
+                      </span>
+                    ) : null}
+                    <div className="gallery-group-detail-process-body">
+                      {detailEditOrder ? (
+                        <img src={img.url} alt="" className="gallery-group-detail-process-img" draggable={false} />
+                      ) : (
+                        <button
+                          type="button"
+                          className="gallery-group-detail-process-img-btn"
+                          onClick={() => {
+                            const gi = resolveProcessImageGlobalIndex(detailLiveItem, img)
+                            if (gi < 0) return
+                            openLightbox(img.url, detailLiveItem.id, gi)
+                          }}
+                        >
+                          <img src={img.url} alt="" className="gallery-group-detail-process-img" draggable={false} />
+                        </button>
+                      )}
+                      <div className="gallery-group-detail-process-meta">
+                        <span className="gallery-group-detail-process-ord">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <span className="gallery-group-detail-process-stamp">{stampFromDate(img)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="gallery-group-detail-add"
+                  onClick={() => detailFileInputRef.current?.click()}
+                >
+                  + 과정샷 추가
+                </button>
+              </>
+            ) : null}
+
+            {onAppendFeedbackCard ? (
+              <>
+                <div className="gallery-detail-feedback-rule" aria-hidden />
+                <section className="gallery-detail-feedback" aria-label="작업 피드백">
+                  <div className="gallery-detail-feedback-box">
+                    <div className="gallery-detail-feedback-head">
+                      <span className="gallery-detail-feedback-label">💬 이번 작업 피드백</span>
+                      <span
+                        className={`gallery-detail-feedback-count${
+                          detailFeedbackDraft.length > 20 ? ' gallery-detail-feedback-count--warn' : ''
+                        }`}
+                      >
+                        {detailFeedbackDraft.length} / 20
+                      </span>
+                    </div>
+                    <textarea
+                      className="gallery-detail-feedback-input"
+                      value={detailFeedbackDraft}
+                      onChange={(e) => setDetailFeedbackDraft(e.target.value)}
+                      maxLength={20}
+                      rows={2}
+                      placeholder="한 줄로 남기는 이번 작업 기록"
+                      aria-label="피드백 입력"
+                    />
+                    <p className="gallery-detail-feedback-hint">20자 이내 · 트래커 카드로 저장돼요</p>
+                    <button
+                      type="button"
+                      className="gallery-detail-feedback-save"
+                      disabled={!detailFeedbackDraft.trim()}
+                      onClick={handleSaveDetailFeedback}
+                    >
+                      💬 피드백 카드로 저장
+                    </button>
+                  </div>
+                </section>
+              </>
+            ) : null}
+          </div>
+          {feedbackSavedToast ? (
+            <div className="gallery-detail-feedback-toast" role="status">
+              저장됐어요 ✓
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {lightbox ? (
         <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label="이미지 전체 보기">
           <div className="gallery-lightbox-toolbar">
@@ -396,9 +982,21 @@ export default function GalleryScreen({
             >
               <PinIcon />
             </button>
-            <button type="button" className="gallery-lightbox-close" onClick={closeLightbox} aria-label="닫기">
-              ✕
-            </button>
+            <div className="gallery-lightbox-toolbar-end">
+              {onRemoveGalleryImage ? (
+                <button
+                  type="button"
+                  className="gallery-lightbox-delete"
+                  aria-label="이미지 삭제"
+                  onClick={handleLightboxDelete}
+                >
+                  <TrashIcon />
+                </button>
+              ) : null}
+              <button type="button" className="gallery-lightbox-close" onClick={closeLightbox} aria-label="닫기">
+                ✕
+              </button>
+            </div>
           </div>
           <div className="gallery-lightbox-scroll">
             <img src={lightbox.src} alt="" className="gallery-lightbox-img" draggable={false} />
@@ -410,7 +1008,11 @@ export default function GalleryScreen({
         <div className="gallery-header-brand">
           <BrandWordmark />
           {!isEmpty ? (
-            <p className="gallery-dnd-hint">카드를 다른 카드 위로 끌어다 놓으면 과정으로 묶을 수 있어요.</p>
+            <p className="gallery-dnd-hint">
+              카드를 다른 카드 위로 끌어다 놓으면
+              <br />
+              <strong className="gallery-dnd-hint-strong">과정</strong>으로 묶을 수 있어요
+            </p>
           ) : null}
         </div>
       </header>
@@ -424,6 +1026,22 @@ export default function GalleryScreen({
                 <p className="gallery-empty-text">아직 완성작이 없어요</p>
                 <p className="gallery-empty-hint">트래커에서 완성 후 갤러리로 보내기</p>
               </div>
+              <button
+                type="button"
+                className="gallery-ref-folder-card gallery-ref-folder-card--empty"
+                onClick={() => onOpenReferenceFolder?.()}
+              >
+                <span className="gallery-ref-folder-card-icon-wrap" aria-hidden>
+                  <ReferenceFolderIcon className="gallery-ref-folder-card-icon" />
+                </span>
+                <span className="gallery-ref-folder-card-text">
+                  <span className="gallery-ref-folder-card-title">레퍼런스</span>
+                  <span className="gallery-ref-folder-card-desc">
+                    참고 이미지·자료를 모아두는 공간 — 탭해서 들어가기
+                  </span>
+                </span>
+                <span className="gallery-ref-folder-card-arrow" aria-hidden />
+              </button>
             </div>
           ) : (
             <div
@@ -520,12 +1138,22 @@ export default function GalleryScreen({
                       </div>
                     ) : null}
                   </div>
-                  <div className="gallery-month-folder-slot">
-                    <button type="button" className="gallery-month-folder-btn" aria-label="Reference folder">
-                      <ReferenceFolderIcon className="gallery-month-folder-icon" />
-                    </button>
-                    <span className="gallery-month-folder-label">Reference Folder</span>
-                  </div>
+                  <button
+                    type="button"
+                    className="gallery-ref-folder-card"
+                    onClick={() => onOpenReferenceFolder?.()}
+                  >
+                    <span className="gallery-ref-folder-card-icon-wrap" aria-hidden>
+                      <ReferenceFolderIcon className="gallery-ref-folder-card-icon" />
+                    </span>
+                    <span className="gallery-ref-folder-card-text">
+                      <span className="gallery-ref-folder-card-title">레퍼런스</span>
+                      <span className="gallery-ref-folder-card-desc">
+                        작업물 말고, 참고할 자료만 따로 모아두는 곳
+                      </span>
+                    </span>
+                    <span className="gallery-ref-folder-card-arrow" aria-hidden />
+                  </button>
                 </div>
                 <div className="gallery-card-list">
                   {visibleItemsForSelectedMonth.length === 0 ? (
@@ -550,13 +1178,13 @@ export default function GalleryScreen({
                         <GroupedCard
                           item={item}
                           pinnedKeySet={pinnedKeySet}
-                          onOpenImage={(url, imageIndex) => openLightbox(url, item.id, imageIndex)}
+                          onOpenGalleryDetail={openGalleryDetail}
                         />
                       ) : (
                         <SingleGalleryCard
                           item={item}
                           pinnedKeySet={pinnedKeySet}
-                          onOpenLightbox={(url, imageIndex) => openLightbox(url, item.id, imageIndex)}
+                          onOpenGalleryDetail={openGalleryDetail}
                           onRemoveGalleryImage={onRemoveGalleryImage}
                         />
                       )}
@@ -572,21 +1200,29 @@ export default function GalleryScreen({
 
       <nav className="gallery-nav" aria-label="하단 메뉴">
         <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('tracker')}>
-          <span className="gallery-nav-icon" aria-hidden />
+          <span className="gallery-nav-icon" aria-hidden>
+            <NavIconTracker />
+          </span>
           트래커
         </button>
         {features.goalScreen ? (
           <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('goal')}>
-            <span className="gallery-nav-icon" aria-hidden />
+            <span className="gallery-nav-icon" aria-hidden>
+              <NavIconGoal />
+            </span>
             목표
           </button>
         ) : null}
         <button type="button" className="gallery-nav-item gallery-nav-item--active">
-          <span className="gallery-nav-icon" aria-hidden />
+          <span className="gallery-nav-icon" aria-hidden>
+            <NavIconGallery />
+          </span>
           갤러리
         </button>
         <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('settings')}>
-          <span className="gallery-nav-icon" aria-hidden />
+          <span className="gallery-nav-icon" aria-hidden>
+            <NavIconSettings />
+          </span>
           설정
         </button>
       </nav>
@@ -681,30 +1317,63 @@ function FinalProcessBlock({
   showFinalBadge = false,
   shellClassName = 'gallery-card-grouped',
   pinnedKeySet = new Set(),
+  presentationOnly = false,
 }) {
-  const final = item.images[item.finalImageIndex]
-  const processIdxs = item.images.map((_, i) => i).filter((i) => i !== item.finalImageIndex)
+  const fi = item.finalImageIndex
+  const hasFinal = fi >= 0 && fi < item.images.length && item.images[fi]
+  const final = hasFinal ? item.images[fi] : null
+  const processIdxs = hasFinal
+    ? item.images.map((_, i) => i).filter((i) => i !== fi)
+    : item.images.map((_, i) => i)
   const thumbs = processIdxs.slice(0, 2)
   const extra = processIdxs.length - 2
 
-  if (!final) return null
-
   const isIdxPinned = (idx) => pinnedKeySet.has(galleryImagePinKey(item.id, idx))
-  const finalPinned = isIdxPinned(item.finalImageIndex)
+  const finalPinned = hasFinal && isIdxPinned(fi)
+
+  const finalInner = hasFinal ? (
+    <>
+      <img src={final.url} alt="" className="gallery-card-grouped-final-img" draggable={false} />
+      {finalPinned ? <GalleryPinCornerBadge /> : null}
+      {showFinalBadge ? <span className="gallery-badge-final">완성본</span> : null}
+      <span className="gallery-card-stamp-bl">{stampFromDate(final)}</span>
+    </>
+  ) : (
+    <>
+      <div className="gallery-card-grouped-final-placeholder" aria-hidden>
+        <span className="gallery-card-grouped-final-placeholder-icon">+</span>
+        <span className="gallery-card-grouped-final-placeholder-text">완성본을 올려주세요</span>
+      </div>
+      {showFinalBadge ? (
+        <span className="gallery-badge-final gallery-badge-final--muted">완성 대기</span>
+      ) : null}
+    </>
+  )
+
+  const finalShellClass = `gallery-card-grouped-final${finalPinned ? ' gallery-card-grouped-final--pinned' : ''}${
+    !hasFinal ? ' gallery-card-grouped-final--empty' : ''
+  }`
 
   return (
     <div className={shellClassName}>
-      <button
-        type="button"
-        className={`gallery-card-grouped-final${finalPinned ? ' gallery-card-grouped-final--pinned' : ''}`}
-        onClick={() => onOpenImage(final.url, item.finalImageIndex)}
-        aria-label={showFinalBadge ? '완성본 크게 보기' : '대표 이미지 크게 보기'}
-      >
-        <img src={final.url} alt="" className="gallery-card-grouped-final-img" draggable={false} />
-        {finalPinned ? <GalleryPinCornerBadge /> : null}
-        {showFinalBadge ? <span className="gallery-badge-final">완성본</span> : null}
-        <span className="gallery-card-stamp-bl">{stampFromDate(final)}</span>
-      </button>
+      {presentationOnly ? (
+        <div className={finalShellClass} aria-hidden>
+          {finalInner}
+        </div>
+      ) : hasFinal ? (
+        <button
+          type="button"
+          className={finalShellClass}
+          onClick={() => onOpenImage(final.url, fi)}
+          aria-label={showFinalBadge ? '완성본 크게 보기' : '대표 이미지 크게 보기'}
+        >
+          {finalInner}
+        </button>
+      ) : (
+        <div className={finalShellClass} aria-hidden>
+          {finalInner}
+        </div>
+      )}
       {processIdxs.length > 0 ? (
         <div className="gallery-process-bar">
           <span className="gallery-process-label">과정</span>
@@ -716,7 +1385,16 @@ function FinalProcessBlock({
             ) : null}
             {thumbs.map((idx) => {
               const thumbPinned = isIdxPinned(idx)
-              return (
+              return presentationOnly ? (
+                <div
+                  key={idx}
+                  className={`gallery-process-thumb${thumbPinned ? ' gallery-process-thumb--pinned' : ''}`}
+                  aria-hidden
+                >
+                  {thumbPinned ? <GalleryPinCornerBadge small /> : null}
+                  <img src={item.images[idx].url} alt="" draggable={false} />
+                </div>
+              ) : (
                 <button
                   key={idx}
                   type="button"
@@ -740,11 +1418,11 @@ function FinalProcessBlock({
  * @param {{
  *   item: NonNullable<ReturnType<typeof normalizeGalleryItem>>
  *   pinnedKeySet?: Set<string>
- *   onOpenLightbox: (url: string, imageIndex: number) => void
+ *   onOpenGalleryDetail: (item: NonNullable<ReturnType<typeof normalizeGalleryItem>>) => void
  *   onRemoveGalleryImage?: (itemId: string, imageIndex: number) => void
  * }} props
  */
-function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage, pinnedKeySet = new Set() }) {
+function SingleGalleryCard({ item, onOpenGalleryDetail, onRemoveGalleryImage, pinnedKeySet = new Set() }) {
   const heroIdx = item.images[item.finalImageIndex] != null ? item.finalImageIndex : 0
   const hero = item.images[heroIdx]
   const heroPinned = pinnedKeySet.has(galleryImagePinKey(item.id, heroIdx))
@@ -754,7 +1432,7 @@ function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage, pinnedK
       <button
         type="button"
         className={`gallery-card-single${heroPinned ? ' gallery-card-single--pinned' : ''}`}
-        onClick={() => onOpenLightbox(hero.url, heroIdx)}
+        onClick={() => onOpenGalleryDetail(item)}
         onContextMenu={(e) => e.preventDefault()}
       >
         {heroPinned ? <GalleryPinCornerBadge /> : null}
@@ -768,7 +1446,7 @@ function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage, pinnedK
           aria-label="이미지 삭제(테스트)"
           onClick={(e) => {
             e.stopPropagation()
-            onRemoveGalleryImage(item.id, item.finalImageIndex)
+            onRemoveGalleryImage(item.id, heroIdx)
           }}
         >
           ✕
@@ -782,17 +1460,31 @@ function SingleGalleryCard({ item, onOpenLightbox, onRemoveGalleryImage, pinnedK
  * @param {{
  *   item: NonNullable<ReturnType<typeof normalizeGalleryItem>>
  *   pinnedKeySet?: Set<string>
- *   onOpenImage: (url: string, imageIndex: number) => void
+ *   onOpenGalleryDetail: (item: NonNullable<ReturnType<typeof normalizeGalleryItem>>) => void
  * }} props
  */
-function GroupedCard({ item, onOpenImage, pinnedKeySet }) {
+function GroupedCard({ item, pinnedKeySet, onOpenGalleryDetail }) {
   return (
-    <FinalProcessBlock
-      item={item}
-      pinnedKeySet={pinnedKeySet}
-      onOpenImage={onOpenImage}
-      showFinalBadge
-      shellClassName="gallery-card-grouped"
-    />
+    <div
+      className="gallery-card-grouped gallery-card-grouped--detail-entry"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenGalleryDetail(item)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenGalleryDetail(item)
+        }
+      }}
+    >
+      <FinalProcessBlock
+        item={item}
+        pinnedKeySet={pinnedKeySet}
+        onOpenImage={() => {}}
+        showFinalBadge
+        presentationOnly
+        shellClassName="gallery-card-grouped-inner"
+      />
+    </div>
   )
 }

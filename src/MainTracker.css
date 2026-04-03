@@ -298,11 +298,24 @@
 
 /* —— Card —— */
 .mt-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 10px;
   margin-bottom: 8px;
   overflow: hidden;
+}
+
+.mt-card--normal {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mt-card--key {
+  background: rgba(45, 212, 191, 0.04);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+}
+
+.mt-card--carry {
+  background: rgba(45, 212, 191, 0.03);
+  border: 1px solid rgba(45, 212, 191, 0.2);
 }
 
 .mt-card-head {
@@ -318,8 +331,40 @@
 .mt-card-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 10px;
   margin-bottom: 8px;
+}
+
+.mt-card-tag-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mt-card-badge {
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  border-radius: 20px;
+  padding: 2px 7px;
+  line-height: 1.3;
+}
+
+.mt-card-badge--key {
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  color: #2dd4bf;
+}
+
+.mt-card-badge--carry {
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+  color: #2dd4bf;
 }
 
 .mt-card-tag {
@@ -328,21 +373,32 @@
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ww-main);
+  min-width: 0;
 }
 
 .mt-card-pct {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
-.mt-card[data-accent='orange'] .mt-card-pct {
-  color: var(--ww-main);
+/* 일반: 메인(주황) */
+.mt-card--normal .mt-card-tag,
+.mt-card--normal .mt-card-pct {
+  color: #fb923c;
 }
 
-.mt-card[data-accent='teal'] .mt-card-pct {
-  color: var(--ww-sub);
+/* 핵심 / 이월: 틸 */
+.mt-card--key .mt-card-tag,
+.mt-card--key .mt-card-pct {
+  color: #2dd4bf;
+}
+
+.mt-card--carry .mt-card-tag,
+.mt-card--carry .mt-card-pct {
+  color: #2dd4bf;
+  opacity: 0.7;
 }
 
 .mt-card-bar {
@@ -352,14 +408,24 @@
   overflow: hidden;
 }
 
-/* width transition은 MainTracker.jsx MT_HEADER_BAR_MS(980)와 동기 */
+/* width·duration은 CardHeadProgress 인라인 transition과 동기 */
 .mt-card-bar-fill {
   height: 100%;
   width: 0;
   max-width: 100%;
-  background: var(--ww-main);
   border-radius: 1px;
-  transition: width 980ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mt-card--normal .mt-card-bar-fill {
+  background: #fb923c;
+}
+
+.mt-card-bar-fill--key {
+  background: #2dd4bf;
+}
+
+.mt-card-bar-fill--carry {
+  background: rgba(45, 212, 191, 0.65);
 }
 
 .mt-card-bar-fill--active {
@@ -370,13 +436,19 @@
   background: var(--ww-sub);
 }
 
-.mt-card[data-accent='teal'] .mt-card-tag {
-  color: var(--ww-sub);
-}
-
 .mt-card-detail {
   padding: 0 14px 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mt-card-monthly-goal {
+  margin: 0 0 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  color: rgba(45, 212, 191, 0.7);
 }
 
 .mt-detail-row {
@@ -387,16 +459,16 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.mt-detail-row:last-of-type {
+.mt-stages .mt-detail-row:last-of-type {
   border-bottom: none;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .mt-check {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
   cursor: pointer;
@@ -421,13 +493,257 @@
   transform: rotate(45deg);
 }
 
+/* 일반 카드: 스테이지만 체크 시 메인(주황) */
+.mt-card--normal .mt-check--on.mt-check--stage-main {
+  background: rgba(251, 146, 60, 0.15);
+  border-color: #fb923c;
+}
+
+.mt-card--normal .mt-check--on.mt-check--stage-main::after {
+  border-color: #fb923c;
+}
+
+/* 완성 확정 후 일괄 체크: 서브(틸) */
+.mt-check--on.mt-check--sealed {
+  background: rgba(45, 212, 191, 0.15);
+  border-color: #2dd4bf;
+}
+
+.mt-check--on.mt-check--sealed::after {
+  border-color: #2dd4bf;
+}
+
 .mt-detail-label {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.55);
 }
 
+.mt-detail-stage-text {
+  flex: 1;
+  min-width: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mt-detail-stage-text:focus-visible {
+  outline: 1px solid rgba(251, 146, 60, 0.45);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.mt-detail-stage-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-bottom: 1px solid rgba(251, 146, 60, 0.4);
+  border-radius: 4px 4px 0 0;
+  padding: 2px 6px;
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  outline: none;
+}
+
 .mt-detail-row--done .mt-detail-label {
   color: var(--ww-sub);
+}
+
+.mt-detail-row--done .mt-detail-stage-text {
+  color: var(--ww-sub);
+}
+
+.mt-card--normal .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-label {
+  color: #fb923c;
+}
+
+.mt-card--normal .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-stage-text {
+  color: #fb923c;
+}
+
+.mt-detail-row--sealed .mt-detail-label {
+  color: #2dd4bf;
+}
+
+.mt-detail-row--sealed .mt-detail-stage-text {
+  color: #2dd4bf;
+}
+
+.mt-card--key .mt-detail-row--done .mt-detail-label,
+.mt-card--key .mt-check--on:not(.mt-check--stage-main) {
+  color: #2dd4bf;
+}
+
+.mt-card--key .mt-detail-row--done .mt-detail-stage-text {
+  color: #2dd4bf;
+}
+
+.mt-card--key .mt-check--on {
+  background: rgba(45, 212, 191, 0.15);
+  border-color: #2dd4bf;
+}
+
+.mt-card--key .mt-check--on::after {
+  border-color: #2dd4bf;
+}
+
+.mt-card--carry .mt-gallery-send:not(.mt-gallery-send--empty) {
+  opacity: 0.7;
+}
+
+.mt-card--carry .mt-detail-row--done .mt-detail-label {
+  opacity: 0.7;
+}
+
+.mt-card--carry .mt-detail-row--done .mt-detail-stage-text {
+  opacity: 0.7;
+}
+
+.mt-card--key .mt-gallery-send:not(.mt-gallery-send--empty) {
+  border-color: rgba(45, 212, 191, 0.45);
+  color: rgba(45, 212, 191, 0.85);
+}
+
+.mt-complete-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mt-complete-counter {
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.mt-complete-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.3);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-align: center;
+}
+
+.mt-complete-btn-text {
+  position: relative;
+  z-index: 1;
+}
+
+.mt-complete-btn--on {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #2dd4bf;
+}
+
+/* 3/3 스테이지 채움 — 카운터·버튼 (틸, 그라데이션 보더) */
+.mt-complete-block--ready .mt-complete-counter {
+  color: rgba(45, 212, 191, 0.7);
+  letter-spacing: 0.06em;
+}
+
+.mt-complete-btn--ready:not(.mt-complete-btn--on) {
+  color: rgba(204, 251, 241, 0.92);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(168deg, rgba(22, 26, 28, 0.97) 0%, rgba(18, 28, 28, 0.98) 100%) padding-box,
+    linear-gradient(
+      118deg,
+      rgba(45, 212, 191, 0.22) 0%,
+      rgba(45, 212, 191, 0.5) 42%,
+      rgba(20, 184, 166, 0.38) 58%,
+      rgba(45, 212, 191, 0.2) 100%
+    )
+    border-box;
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* 3/3 직후 한 번: 대각 쉬머 스윕 (글로우 없음) */
+.mt-complete-btn-shimmer {
+  position: absolute;
+  z-index: 0;
+  top: -40%;
+  left: -30%;
+  width: 38%;
+  height: 180%;
+  pointer-events: none;
+  border-radius: 40%;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 35%,
+    rgba(45, 212, 191, 0.18) 50%,
+    rgba(255, 255, 255, 0.03) 65%,
+    transparent 100%
+  );
+  transform: translate3d(0, 0, 0) rotate(18deg);
+  animation: mt-complete-shimmer 0.92s cubic-bezier(0.33, 1, 0.68, 1) 1 forwards;
+}
+
+@keyframes mt-complete-shimmer {
+  0% {
+    opacity: 0;
+    transform: translate3d(-5%, 0, 0) rotate(18deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(380%, 0, 0) rotate(18deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-complete-btn-shimmer {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.mt-complete-btn:disabled {
+  cursor: default;
+}
+
+.mt-complete-btn:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: 2px;
 }
 
 /* —— Image slots —— */
@@ -620,6 +936,238 @@
   outline-offset: 2px;
 }
 
+/* —— Gallery feedback (under matching work card) —— */
+.mt-feedback-card-wrap {
+  margin: 0 0 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.mt-feedback-card-wrap--swipeable {
+  touch-action: pan-y;
+}
+
+.mt-feedback-card {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  padding: 10px 14px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  box-sizing: border-box;
+}
+
+.mt-feedback-card--surface {
+  will-change: transform;
+}
+
+.mt-feedback-card__bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background: var(--ww-sub);
+}
+
+.mt-feedback-card__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-left: 6px;
+}
+
+.mt-feedback-card__row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.mt-feedback-card__title {
+  flex: 1;
+  min-width: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  color: var(--ww-sub);
+  text-wrap: balance;
+}
+
+.mt-feedback-card__date {
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--ww-sub);
+  line-height: 1.35;
+  padding-top: 1px;
+}
+
+.mt-feedback-card__text {
+  margin: 0 0 8px;
+  padding-left: 2px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ww-sub);
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.mt-feedback-card__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.mt-feedback-card__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ww-sub);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mt-feedback-card__icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mt-feedback-card__icon-btn:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: 1px;
+}
+
+.mt-feedback-card__icon-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.mt-feedback-card__export-svg {
+  display: block;
+}
+
+.mt-feedback-card__dismiss-btn {
+  font-size: 11px;
+}
+
+.mt-feedback-card--main {
+  border-color: rgba(var(--ww-main-rgb), 0.42);
+  background: rgba(var(--ww-main-rgb), 0.14);
+}
+
+.mt-feedback-card--main .mt-feedback-card__bar {
+  background: var(--ww-main);
+}
+
+.mt-feedback-card--main .mt-feedback-card__title,
+.mt-feedback-card--main .mt-feedback-card__date,
+.mt-feedback-card--main .mt-feedback-card__text {
+  color: var(--ww-main);
+}
+
+.mt-feedback-card--main .mt-feedback-card__icon-btn {
+  color: var(--ww-main);
+}
+
+.mt-feedback-card--main .mt-feedback-card__icon-btn:disabled {
+  opacity: 0.35;
+}
+
+/* 피드백 연결 이미지 즉시 보기 */
+.mt-feedback-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 450;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.72);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mt-feedback-preview-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+  max-width: min(92vw, 360px);
+  max-height: min(85vh, 520px);
+  box-sizing: border-box;
+}
+
+.mt-feedback-preview-img {
+  display: block;
+  width: 100%;
+  max-height: min(68vh, 440px);
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.mt-feedback-preview-close {
+  flex-shrink: 0;
+  width: 100%;
+  margin: 0;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0a0a0a;
+  background: var(--ww-main);
+  cursor: pointer;
+}
+
+.mt-feedback-preview-close:focus-visible {
+  outline: 2px solid var(--ww-sub);
+  outline-offset: 2px;
+}
+
+.mt-feedback-preview-caption {
+  margin: 0;
+  padding: 0 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  word-break: break-word;
+}
+
 /* —— Add card —— */
 .mt-card-add {
   width: 100%;
@@ -677,11 +1225,20 @@
 }
 
 .mt-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: currentColor;
+  flex-shrink: 0;
+  color: inherit;
   opacity: 0.95;
+}
+
+.mt-nav-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 .mt-nav-item--active .mt-nav-icon {
