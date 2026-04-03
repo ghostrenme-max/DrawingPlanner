@@ -84,7 +84,7 @@ export const ko = {
     scopeDayMonth: '일 · 월',
     scopeYear: '연도',
     unset: '목표 미정',
-    hintYearFromSettings: '설정의 GOALS · YEAR에서 이 기간의 목표를 입력해 주세요.',
+    hintYearFromSettings: '설정의 GOALS · YEAR에서\n이 기간의 목표를 입력해 주세요.',
     periodToolbarYear: '{label} · {n}년',
     periodToolbarDm: '{label} 단위',
     monthGoalTitle: '{n}월 목표',

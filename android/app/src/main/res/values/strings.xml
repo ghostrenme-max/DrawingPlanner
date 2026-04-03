@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">withworth</string>
+    <string name="title_activity_main">withworth</string>
+    <string name="package_name">com.withworth.app</string>
+    <string name="custom_url_scheme">com.withworth.app</string>
+</resources>

@@ -84,7 +84,7 @@ export const ja = {
     scopeDayMonth: '日 · 月',
     scopeYear: '年',
     unset: '目標未設定',
-    hintYearFromSettings: '設定の GOALS · YEAR でこの期間の目標を入力してください。',
+    hintYearFromSettings: '設定の GOALS · YEAR\nでこの期間の目標を入力してください。',
     periodToolbarYear: '{label} · {n}年',
     periodToolbarDm: '{label} 単位',
     monthGoalTitle: '{n}月の目標',

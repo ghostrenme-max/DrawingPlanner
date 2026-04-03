@@ -108,46 +108,47 @@ export default function OnboardingScreen({
         aria-labelledby="ob-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h1 id="ob-title" className="ob-title" style={{ whiteSpace: 'pre-line' }}>
-          {t.onboarding.title}
-        </h1>
-
         {step === 1 ? (
           <>
-            <p className="ob-lead" style={{ whiteSpace: 'pre-line' }}>
-              {t.onboarding.subtitle}
-            </p>
-            <textarea
-              ref={areaRef}
-              className="ob-textarea"
-              value={goalText}
-              onChange={(e) => setGoalText(e.target.value)}
-              placeholder={t.onboarding.placeholder}
-              rows={6}
-              aria-label={t.onboarding.goalInputAria}
-            />
-            <p className="ob-field-label">{t.onboarding.fieldLabel}</p>
-            <div className="ob-field-chips" role="group" aria-label={t.onboarding.fieldGroupAria}>
-              {ONBOARDING_FIELD_OPTIONS.map(({ field, label }) => {
-                const on = selectedField === field
-                const chipLabel =
-                  field == null
-                    ? t.onboarding.fieldLabelOther
-                    : t.onboarding.fieldLabels[field] ?? label
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    className={`ob-field-chip${on ? ' ob-field-chip--on' : ''}`}
-                    aria-pressed={on}
-                    onClick={() => setSelectedField(field)}
-                  >
-                    {chipLabel}
-                  </button>
-                )
-              })}
+            <div className="ob-dialog-scroll">
+              <h1 id="ob-title" className="ob-title" style={{ whiteSpace: 'pre-line' }}>
+                {t.onboarding.title}
+              </h1>
+              <p className="ob-lead" style={{ whiteSpace: 'pre-line' }}>
+                {t.onboarding.subtitle}
+              </p>
+              <textarea
+                ref={areaRef}
+                className="ob-textarea"
+                value={goalText}
+                onChange={(e) => setGoalText(e.target.value)}
+                placeholder={t.onboarding.placeholder}
+                rows={5}
+                aria-label={t.onboarding.goalInputAria}
+              />
+              <p className="ob-field-label">{t.onboarding.fieldLabel}</p>
+              <div className="ob-field-chips" role="group" aria-label={t.onboarding.fieldGroupAria}>
+                {ONBOARDING_FIELD_OPTIONS.map(({ field, label }) => {
+                  const on = selectedField === field
+                  const chipLabel =
+                    field == null
+                      ? t.onboarding.fieldLabelOther
+                      : t.onboarding.fieldLabels[field] ?? label
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      className={`ob-field-chip${on ? ' ob-field-chip--on' : ''}`}
+                      aria-pressed={on}
+                      onClick={() => setSelectedField(field)}
+                    >
+                      {chipLabel}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <div className="ob-actions">
+            <div className="ob-actions ob-actions--footer">
               <button type="button" className="ob-btn ob-btn--ghost" onClick={() => onDismiss?.()}>
                 {t.onboarding.later}
               </button>
@@ -158,6 +159,10 @@ export default function OnboardingScreen({
           </>
         ) : (
           <>
+            <div className="ob-dialog-scroll ob-dialog-scroll--step2">
+              <h1 id="ob-title" className="ob-title" style={{ whiteSpace: 'pre-line' }}>
+                {t.onboarding.title}
+              </h1>
             <div className="ob-confirm-box">
               <p className="ob-confirm-label">{t.onboarding.yearGoalBox}</p>
               <p className="ob-confirm-text">{goalText.trim() || '—'}</p>
@@ -221,12 +226,15 @@ export default function OnboardingScreen({
                 )
               })}
             </div>
-            <button type="button" className="ob-start-btn" onClick={handleStart}>
-              {t.onboarding.startBtn}
-            </button>
-            <button type="button" className="ob-skip-detail" onClick={handleSkipDetail}>
-              {t.onboarding.skipBtn}
-            </button>
+            </div>
+            <div className="ob-actions ob-actions--footer ob-actions--step2">
+              <button type="button" className="ob-start-btn" onClick={handleStart}>
+                {t.onboarding.startBtn}
+              </button>
+              <button type="button" className="ob-skip-detail" onClick={handleSkipDetail}>
+                {t.onboarding.skipBtn}
+              </button>
+            </div>
 
             {showEditModal ? (
               <div

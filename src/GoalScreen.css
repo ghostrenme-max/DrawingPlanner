@@ -256,6 +256,7 @@
   font-size: 14px;
   color: rgba(255, 255, 255, 0.32);
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 .goal-text-num {
@@ -720,6 +721,7 @@
   box-sizing: border-box;
   transform: none;
   z-index: 0;
+  overflow: hidden;
 }
 
 .goal-mbar-fill--cascade-idle {
@@ -757,16 +759,17 @@
   }
 }
 
-.goal-mbar-pct {
+/* 채움 상단 — 막대와 함께 상승. 15% 미만 월은 라벨 비렌더, 이상은 채움 overflow로 높이 맞춰질 때까지 잘림 */
+.goal-mbar-fill .goal-mbar-pct {
   position: absolute;
-  bottom: 3px;
   left: 0;
   right: 0;
+  top: 3px;
   text-align: center;
   font-family: 'DM Mono', monospace;
-  font-size: 7px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 8px;
+  font-weight: 600;
+  color: #0a0a0a;
   line-height: 1;
   pointer-events: none;
   z-index: 1;

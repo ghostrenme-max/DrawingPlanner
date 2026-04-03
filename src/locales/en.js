@@ -84,7 +84,7 @@ export const en = {
     scopeDayMonth: 'Day · month',
     scopeYear: 'Year',
     unset: 'No goal set',
-    hintYearFromSettings: 'Enter this horizon’s goal in Settings → GOALS · YEAR.',
+    hintYearFromSettings: 'Settings → GOALS · YEAR\nEnter this horizon’s goal.',
     periodToolbarYear: '{label} · {n}yr',
     periodToolbarDm: '{label} view',
     monthGoalTitle: 'Month {n} goal',

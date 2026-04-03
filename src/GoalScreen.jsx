@@ -22,6 +22,9 @@ const GOAL_HEADER_BAR_MS = 980
 
 const GOAL_PROGRESS_PERCENT = 33
 
+/** 월 막대 % 라벨: 저장 진행률이 이 값 미만이면 비렌더(애니 중엔 채움 overflow로 잘림 해제와 맞춤) */
+const GOAL_MBAR_PCT_SHOW_MIN = 15
+
 /** 12개월 막대 연쇄: 진행률별 duration (100%→600ms …) */
 function getBarDurationMs(progress) {
   const p = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)))
@@ -614,9 +617,12 @@ export default function GoalScreen({
                         ['--cascade-duration']: `${barMs}ms`,
                         ['--cascade-delay']: `${cascadeDelay}ms`,
                       }}
-                    />
+                    >
+                      {pctLive >= GOAL_MBAR_PCT_SHOW_MIN ? (
+                        <span className="goal-mbar-pct">{pctLive}%</span>
+                      ) : null}
+                    </div>
                   ) : null}
-                  {pctLive > 0 ? <span className="goal-mbar-pct">{pctLive}%</span> : null}
                 </div>
                 <span className="goal-mbar-lbl">
                   {t.common.monthSuffix ? `${m}${t.common.monthSuffix}` : `${m}`}
