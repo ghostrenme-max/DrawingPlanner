@@ -587,6 +587,9 @@ function App() {
             features={appFeatures}
             goalTexts={goalTexts}
             goalStartDate={goalStartDate}
+            monthlyGoals={monthlyGoals}
+            onMonthlyGoalsChange={setMonthlyGoals}
+            trackerCards={trackerCards}
           />
         ) : screen === 'reference' ? (
           <ReferenceFolderScreen

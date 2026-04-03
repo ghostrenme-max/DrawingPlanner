@@ -1,9 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import {
   applyGoalDisplayBreaks,
   createEmptyGoalTexts,
-  getGoalDmDetailTitle,
   GOAL_DM_ZOOM,
   splitGoalHeaderParagraphs,
   yearHorizonToGoalKey,
@@ -12,228 +11,120 @@ import {
   computeYearTimeline,
   horizonYearsFromTab,
   normalizeGoalStart,
-  pad2,
-  timelineBarLabel,
 } from './goalYearTimeline.js'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GoalScreen.css'
 
-/** 이미 지난 달(100% 채움) 막대 상승 — 빠르게 */
-const GOAL_BAR_RISE_FAST_MS = 380
-/** 이번 달(진행 중, 부분 채움) 막대 상승 — 기존 속도 유지 */
-const GOAL_BAR_RISE_CURRENT_MS = 1100
-
-/** 상단 진행률 가로 바 + % 숫자 — 트래커 헤더(mt-bar-fill)와 동일 시간·이징 */
+/** 상단 진행률 가로 바 + % 숫자 — 트래커 헤더와 동기 */
 const GOAL_HEADER_BAR_MS = 980
 
-/** 이전 달 막대 애니가 이 비율만큼 진행된 뒤 다음 달 상승 시작 (1이면 100% 끝난 뒤) */
-const GOAL_BAR_NEXT_START_AFTER_PREV_FRAC = 0.85
-
-/** 상단 진행률·월별 막대가 끝난 뒤 작업 도트 바운스까지 여유(ms) */
-const GOAL_TASK_DOTS_AFTER_BARS_MS = 160
-
-/** 같은 행에서 이전 도트가 시작한 뒤 다음 도트 시작까지(ms) — 1→2→… 순차 */
-const GOAL_TASK_DOT_STAGGER_MS = 100
-
-/** 한 행 마지막 도트 애니가 끝난 뒤, 다음 행 첫 도트까지(ms) */
-const GOAL_TASK_ROW_GAP_MS = 120
-
-/** CSS .goal-task-dot-fill-bounce duration(0.58s)과 동기 */
-const GOAL_TASK_DOT_ANIM_MS = 580
-
-/** 일·월 보기 막대 — 데모용 고정 진행률 */
 const GOAL_PROGRESS_PERCENT = 33
 
-const EMPTY_TASK_LIST = []
+/** 월 막대 상승 — 지난 달·완료 구간은 짧게, 진행 중은 길게 (기존 GoalScreen 타이밍) */
+const GOAL_MBAR_RISE_FAST_MS = 380
+const GOAL_MBAR_RISE_CURRENT_MS = 1100
+const GOAL_MBAR_STAGGER_MS = 85
 
-const MONTH_TASKS = {
-  '04': [
-    { name: '메인일러스트', done: 5 },
-    { name: '전신반신', done: 3 },
-    { name: 'UI디자인', done: 1 },
-  ],
-  '05': [
-    { name: '메인일러스트', done: 3 },
-    { name: '캐릭터시트', done: 2 },
-  ],
-}
-
-/** @param {{ key: string; year: number; mm: string }[]} slots */
-function groupSlotsByCalendarYear(slots) {
-  const map = new Map()
-  for (const slot of slots) {
-    if (!map.has(slot.year)) map.set(slot.year, [])
-    map.get(slot.year).push(slot)
-  }
-  return /** @type {[number, typeof slots][]} */ ([...map.entries()].sort((a, b) => a[0] - b[0]))
-}
-
-/** @param {{ year: number; mm: string }[]} slots */
-function formatSlotRangeLabel(slots) {
-  if (slots.length === 0) return ''
-  const first = slots[0]
-  const last = slots[slots.length - 1]
-  return `${first.year}.${first.mm} — ${last.year}.${last.mm}`
-}
-
-/**
- * 연도 카드용 — 슬롯에 등장한 월(mm) 순으로 데모 작업 합침
- * @param {{ year: number; mm: string }[]} slots
- */
-function collectTasksForYearSlots(slots) {
-  const mmOrder = []
-  const seen = new Set()
-  for (const s of slots) {
-    if (seen.has(s.mm)) continue
-    seen.add(s.mm)
-    mmOrder.push(s.mm)
-  }
-  const out = []
-  for (const mm of mmOrder) {
-    const list = MONTH_TASKS[mm]
-    if (!list) continue
-    for (const t of list) {
-      out.push({ ...t, _taskKey: `${mm}-${t.name}` })
-    }
-  }
-  return out
-}
+const GOAL_WORK_DOTS = 5
+/** 작업 행 도트 — 기존 GoalScreen TaskRow 타이밍 */
+const GOAL_TASK_DOT_STAGGER_MS = 100
+const GOAL_TASK_ROW_GAP_MS = 120
+const GOAL_TASK_DOT_ANIM_MS = 580
+const GOAL_TASK_DOTS_AFTER_MBARS_MS = 160
 
 function currentYearMonth() {
   const d = new Date()
-  return { year: d.getFullYear(), monthMm: pad2(d.getMonth() + 1) }
+  return { year: d.getFullYear(), monthMm: String(d.getMonth() + 1).padStart(2, '0') }
 }
 
-function monthLabel(mm) {
-  return `${Number(mm)}월`
+function padMonth1to12(m) {
+  return String(m).padStart(2, '0')
 }
 
-function buildBarAnimScheduleFromPcts(targetPcts) {
-  let accDelay = 0
-  return targetPcts.map((targetPct) => {
-    const riseMs =
-      targetPct <= 0 ? 0 : targetPct >= 100 ? GOAL_BAR_RISE_FAST_MS : GOAL_BAR_RISE_CURRENT_MS
-    const delayMs = targetPct > 0 ? accDelay : 0
-    if (targetPct > 0) accDelay += riseMs * GOAL_BAR_NEXT_START_AFTER_PREV_FRAC
-    return { delayMs, riseMs, targetPct }
-  })
+function ymForYearMonth(gridYear, monthIndex0) {
+  return `${gridYear}-${padMonth1to12(monthIndex0 + 1)}`
 }
 
-function barFillPercentDm(segIdx, currentSegIdx, progressPct) {
-  if (segIdx < currentSegIdx) return 100
-  if (segIdx === currentSegIdx) return progressPct
-  return 0
+function averagePercent(cards) {
+  if (!cards.length) return 0
+  return Math.round(cards.reduce((s, c) => s + (Number(c.percent) || 0), 0) / cards.length)
 }
 
-function buildBarAnimScheduleDm(nSegments, currentSegIdx, progressPct) {
-  let accDelay = 0
-  return Array.from({ length: nSegments }, (_, segIdx) => {
-    const targetPct = barFillPercentDm(segIdx, currentSegIdx, progressPct)
-    const riseMs =
-      targetPct <= 0 ? 0 : targetPct >= 100 ? GOAL_BAR_RISE_FAST_MS : GOAL_BAR_RISE_CURRENT_MS
-    const delayMs = targetPct > 0 ? accDelay : 0
-    if (targetPct > 0) accDelay += riseMs * GOAL_BAR_NEXT_START_AFTER_PREV_FRAC
-    return { delayMs, riseMs, targetPct, segIdx }
-  })
+/** @param {Record<string, unknown>} card */
+function filledWorkDots(card) {
+  if (card.workFinalized) return GOAL_WORK_DOTS
+  const p = Number(card.percent) || 0
+  return Math.min(GOAL_WORK_DOTS, Math.max(0, Math.round((p / 100) * GOAL_WORK_DOTS)))
 }
 
-/** barsPlay 시점 기준으로 막대 fill CSS 애니가 가장 늦게 끝나는 시각(ms) */
-function maxBarAnimEndMs(schedule) {
-  let max = 0
-  for (const { delayMs, riseMs } of schedule) {
-    if (riseMs <= 0) continue
-    max = Math.max(max, delayMs + riseMs)
-  }
-  return max
-}
-
-/** 각 작업 행 첫 도트의 animation-delay 기준(ms) — 이전 행은 마지막 도트 애니 종료 직후까지 대기 */
-function buildTaskRowDotBaseDelaysMs(taskList, staggerMs, gapMs, animMs) {
+/** 각 행 첫 도트의 animation-delay 기준(ms) — 행 간 순차 */
+function buildWorkRowDotBaseDelaysMs(rowsDone, staggerMs, gapMs, animMs) {
   const rowBases = []
   let acc = 0
-  for (let r = 0; r < taskList.length; r++) {
+  for (let r = 0; r < rowsDone.length; r++) {
     rowBases.push(acc)
-    const d = Math.min(5, Math.max(0, taskList[r].done))
+    const d = Math.min(GOAL_WORK_DOTS, Math.max(0, rowsDone[r]))
     if (d > 0) acc += (d - 1) * staggerMs + animMs + gapMs
   }
   return rowBases
 }
 
-function GoalBarAnimatedPct({ target, play, riseMs, delayMs }) {
-  const [v, setV] = useState(0)
+/**
+ * @param {{
+ *   name: string
+ *   done: number
+ *   carry: boolean
+ *   rowDelayMs: number
+ *   dotsPlay: boolean
+ *   reducedMotion: boolean
+ * }} props
+ */
+function GoalPanelWorkRow({ name, done, carry, rowDelayMs, dotsPlay, reducedMotion }) {
+  const [nameFull, setNameFull] = useState(false)
 
   useEffect(() => {
-    if (!play || target <= 0) {
-      setV(0)
-      return
-    }
-
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    if (reduced) {
-      const id = window.setTimeout(() => setV(target), delayMs)
-      return () => window.clearTimeout(id)
-    }
-
-    let raf = 0
-    const t0 = performance.now() + delayMs
-
-    const easeOut = (x) => 1 - (1 - x) ** 2
-
-    const frame = (now) => {
-      if (now < t0) {
-        raf = requestAnimationFrame(frame)
-        return
-      }
-      const t = Math.min(1, (now - t0) / riseMs)
-      setV(Math.round(easeOut(t) * target))
-      if (t < 1) raf = requestAnimationFrame(frame)
-    }
-    raf = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(raf)
-  }, [play, target, riseMs, delayMs])
-
-  if (target <= 0) return null
-  return <span className="goal-bar-pct">{v}%</span>
-}
-
-function TaskRow({ name, done, dotsPlay, rowDelayMs, dotStaggerMs, reducedMotion }) {
-  const [nameOrange, setNameOrange] = useState(false)
-
-  useEffect(() => {
-    if (done < 5) {
-      setNameOrange(false)
+    if (done < GOAL_WORK_DOTS) {
+      setNameFull(false)
       return
     }
     if (!dotsPlay) {
-      setNameOrange(false)
+      setNameFull(false)
       return
     }
     if (reducedMotion) {
-      setNameOrange(true)
+      setNameFull(true)
       return
     }
     const ms =
-      rowDelayMs + 4 * dotStaggerMs + Math.round(GOAL_TASK_DOT_ANIM_MS * 0.72)
-    const id = window.setTimeout(() => setNameOrange(true), ms)
+      rowDelayMs +
+      (GOAL_WORK_DOTS - 1) * GOAL_TASK_DOT_STAGGER_MS +
+      Math.round(GOAL_TASK_DOT_ANIM_MS * 0.72)
+    const id = window.setTimeout(() => setNameFull(true), ms)
     return () => window.clearTimeout(id)
-  }, [done, dotsPlay, rowDelayMs, dotStaggerMs, reducedMotion])
+  }, [done, dotsPlay, rowDelayMs, reducedMotion])
 
   return (
-    <div className="goal-task">
-      <span className={`goal-task-name${nameOrange ? ' goal-task-name--full' : ''}`}>{name}</span>
-      <div className="goal-task-dots" aria-hidden>
-        {Array.from({ length: 5 }, (_, i) => {
-          const on = i < done
+    <div className="goal-work-row">
+      <span className={`goal-work-row-name${nameFull ? ' goal-work-row-name--full' : ''}`}>{name}</span>
+      <div className="goal-work-row-dots" aria-hidden>
+        {Array.from({ length: GOAL_WORK_DOTS }, (_, di) => {
+          const on = di < done
           const filled = on && dotsPlay
-          const delayMs = rowDelayMs + i * dotStaggerMs
+          const animate =
+            filled && !reducedMotion ? (carry ? 'goal-work-dot--carry-animate' : 'goal-work-dot--animate') : ''
+          const delayMs = rowDelayMs + di * GOAL_TASK_DOT_STAGGER_MS
           return (
             <span
-              key={i}
-              className={`goal-task-dot${filled ? ' goal-task-dot--on' : ''}${filled && !reducedMotion ? ' goal-task-dot--animate' : ''}`}
-              style={
-                filled && !reducedMotion ? { animationDelay: `${delayMs}ms` } : undefined
-              }
+              key={di}
+              className={[
+                'goal-work-dot',
+                on ? (carry ? 'goal-work-dot--carry' : 'goal-work-dot--on') : '',
+                animate,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              style={filled && !reducedMotion ? { animationDelay: `${delayMs}ms` } : undefined}
             />
           )
         })}
@@ -247,6 +138,9 @@ function TaskRow({ name, done, dotsPlay, rowDelayMs, dotStaggerMs, reducedMotion
  *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
  *   goalTexts?: Record<string, string>
  *   goalStartDate?: string
+ *   monthlyGoals?: string[]
+ *   onMonthlyGoalsChange?: (updater: (prev: string[]) => string[]) => void
+ *   trackerCards?: Record<string, unknown>[]
  * }} props
  */
 export default function GoalScreen({
@@ -254,18 +148,54 @@ export default function GoalScreen({
   features = DEFAULT_APP_FEATURES,
   goalTexts = createEmptyGoalTexts(),
   goalStartDate = '',
+  monthlyGoals = [],
+  onMonthlyGoalsChange,
+  trackerCards = [],
 }) {
-  const { year: calendarYear, monthMm: currentMonthMm } = currentYearMonth()
-  /** 기본 보기: 연도 */
+  const { year: calendarYear } = currentYearMonth()
+  const gridYear = calendarYear
+
   const [goalScope, setGoalScope] = useState(/** @type {'year' | 'dayMonth'} */ ('year'))
   const [activeHorizon, setActiveHorizon] = useState(/** @type {'1' | '3' | '5' | '10'} */ ('1'))
   const [dmZoomId, setDmZoomId] = useState(GOAL_DM_ZOOM[0].id)
-  const [selectedTimelineKey, setSelectedTimelineKey] = useState(/** @type {string | null} */ (null))
-  const [selectedDmSegIdx, setSelectedDmSegIdx] = useState(0)
   const [barsPlay, setBarsPlay] = useState(false)
-  const [taskDotsPlay, setTaskDotsPlay] = useState(false)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [headerPctDisplay, setHeaderPctDisplay] = useState(0)
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => new Date().getMonth())
+  const [monthGoalEditing, setMonthGoalEditing] = useState(false)
+  const [monthGoalDraft, setMonthGoalDraft] = useState('')
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [taskDotsPlay, setTaskDotsPlay] = useState(false)
+
+  const goals12 = useMemo(() => {
+    const g = Array.isArray(monthlyGoals) ? [...monthlyGoals] : []
+    while (g.length < 12) g.push('')
+    return g.slice(0, 12)
+  }, [monthlyGoals])
+
+  const cardsForSelectedMonth = useMemo(() => {
+    const ym = ymForYearMonth(gridYear, selectedMonthIndex)
+    return trackerCards.filter((c) => c && typeof c === 'object' && c.activeMonthYm === ym)
+  }, [trackerCards, gridYear, selectedMonthIndex])
+
+  const workRowsDone = useMemo(
+    () => cardsForSelectedMonth.map((c) => filledWorkDots(c)),
+    [cardsForSelectedMonth],
+  )
+
+  const workRowDotBaseDelaysMs = useMemo(
+    () =>
+      buildWorkRowDotBaseDelaysMs(
+        workRowsDone,
+        GOAL_TASK_DOT_STAGGER_MS,
+        GOAL_TASK_ROW_GAP_MS,
+        GOAL_TASK_DOT_ANIM_MS,
+      ),
+    [workRowsDone],
+  )
+
+  useEffect(() => {
+    setMonthGoalEditing(false)
+  }, [selectedMonthIndex])
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)')
@@ -284,9 +214,19 @@ export default function GoalScreen({
     return () => window.clearTimeout(t)
   }, [goalScope, dmZoomId, activeHorizon])
 
+  /** 월 막대 상승이 끝난 뒤 작업 도트·이름 이펙트 재생 */
   useEffect(() => {
-    setSelectedDmSegIdx(0)
-  }, [dmZoomId])
+    setTaskDotsPlay(false)
+    if (!barsPlay) return
+    if (prefersReducedMotion) {
+      setTaskDotsPlay(true)
+      return
+    }
+    const lastMbarDelay = 11 * GOAL_MBAR_STAGGER_MS
+    const mbarEnd = lastMbarDelay + GOAL_MBAR_RISE_CURRENT_MS
+    const id = window.setTimeout(() => setTaskDotsPlay(true), mbarEnd + GOAL_TASK_DOTS_AFTER_MBARS_MS)
+    return () => window.clearTimeout(id)
+  }, [barsPlay, prefersReducedMotion, selectedMonthIndex, cardsForSelectedMonth])
 
   const yearView = useMemo(() => {
     if (goalScope !== 'year') {
@@ -304,21 +244,39 @@ export default function GoalScreen({
     return computeYearTimeline(start, hy)
   }, [goalScope, goalStartDate, activeHorizon])
 
-  const headerTargetPct = goalScope === 'year' ? yearView.overallPct : GOAL_PROGRESS_PERCENT
+  /** 올해 트래커 카드 평균 진행률 — 있으면 헤더·숫자 애니가 100%까지 올라갈 수 있음 */
+  const yearTrackerAvgPct = useMemo(() => {
+    const yp = `${gridYear}-`
+    const list = trackerCards.filter(
+      (c) =>
+        c &&
+        typeof c === 'object' &&
+        typeof c.activeMonthYm === 'string' &&
+        c.activeMonthYm.startsWith(yp),
+    )
+    if (list.length === 0) return null
+    return Math.round(
+      list.reduce((s, c) => s + (Number(c.percent) || 0), 0) / list.length,
+    )
+  }, [trackerCards, gridYear])
+
+  const headerTargetPct =
+    goalScope === 'year'
+      ? yearTrackerAvgPct != null
+        ? yearTrackerAvgPct
+        : yearView.overallPct
+      : GOAL_PROGRESS_PERCENT
   const isYear1HeaderLayout = goalScope === 'year' && activeHorizon === '1'
 
-  useEffect(() => {
-    if (goalScope !== 'year') return
-    const keyThisMonth = `${calendarYear}-${currentMonthMm}`
-    const match = yearView.slots.find((s) => s.key === keyThisMonth)
-    const next =
-      match?.key ??
-      (yearView.currentSlotIndex >= 0
-        ? yearView.slots[yearView.currentSlotIndex]?.key
-        : yearView.slots[0]?.key) ??
-      null
-    if (next) setSelectedTimelineKey(next)
-  }, [goalScope, yearView, calendarYear, currentMonthMm])
+  const dmSpec = useMemo(
+    () => GOAL_DM_ZOOM.find((z) => z.id === dmZoomId) ?? GOAL_DM_ZOOM[0],
+    [dmZoomId],
+  )
+
+  const isActiveGoalSettled = useMemo(() => {
+    const key = goalScope === 'year' ? yearHorizonToGoalKey(activeHorizon) : dmZoomId
+    return (goalTexts[key] ?? '').trim().length > 0
+  }, [goalScope, activeHorizon, dmZoomId, goalTexts])
 
   useEffect(() => {
     if (!barsPlay) return
@@ -346,84 +304,28 @@ export default function GoalScreen({
     }
   }, [barsPlay, headerTargetPct])
 
-  const dmSpec = useMemo(
-    () => GOAL_DM_ZOOM.find((z) => z.id === dmZoomId) ?? GOAL_DM_ZOOM[0],
-    [dmZoomId],
-  )
+  const selectedMonthGoalText = goals12[selectedMonthIndex] ?? ''
+  const showMonthGoalEmpty = !selectedMonthGoalText.trim() && !monthGoalEditing
 
-  const dmCurrentSegIdx = useMemo(
-    () => Math.min(2, Math.max(0, dmSpec.segments.length - 1)),
-    [dmSpec.segments.length],
-  )
+  const beginEditMonthGoal = () => {
+    setMonthGoalDraft(selectedMonthGoalText)
+    setMonthGoalEditing(true)
+  }
 
-  const selectedYearSlot = useMemo(() => {
-    if (!selectedTimelineKey) return null
-    return yearView.slots.find((s) => s.key === selectedTimelineKey) ?? null
-  }, [yearView.slots, selectedTimelineKey])
-
-  const isActiveGoalSettled = useMemo(() => {
-    const key = goalScope === 'year' ? yearHorizonToGoalKey(activeHorizon) : dmZoomId
-    return (goalTexts[key] ?? '').trim().length > 0
-  }, [goalScope, activeHorizon, dmZoomId, goalTexts])
-
-  const tasks = useMemo(() => {
-    if (goalScope !== 'year' || !selectedYearSlot) return EMPTY_TASK_LIST
-    return MONTH_TASKS[selectedYearSlot.mm] ?? EMPTY_TASK_LIST
-  }, [goalScope, selectedYearSlot])
-
-  const barAnimSchedule = useMemo(() => {
-    if (goalScope === 'year') {
-      return buildBarAnimScheduleFromPcts(yearView.barTargetPcts)
-    }
-    return buildBarAnimScheduleDm(
-      dmSpec.segments.length,
-      dmCurrentSegIdx,
-      GOAL_PROGRESS_PERCENT,
-    )
-  }, [goalScope, yearView.barTargetPcts, dmSpec.segments.length, dmCurrentSegIdx])
-
-  const slotIndexByKey = useMemo(() => {
-    const m = new Map()
-    yearView.slots.forEach((s, i) => m.set(s.key, i))
-    return m
-  }, [yearView.slots])
-
-  const useMultiYearSections =
-    goalScope === 'year' && (activeHorizon === '3' || activeHorizon === '5' || activeHorizon === '10')
-
-  const yearSectionGroups = useMemo(
-    () => (useMultiYearSections ? groupSlotsByCalendarYear(yearView.slots) : []),
-    [useMultiYearSections, yearView.slots],
-  )
-
-  const useDenseYearGrid = goalScope === 'dayMonth'
-
-  const taskDotsDelayAfterBarsPlayMs = useMemo(() => {
-    const barEnd = maxBarAnimEndMs(barAnimSchedule)
-    return Math.max(GOAL_HEADER_BAR_MS, barEnd) + GOAL_TASK_DOTS_AFTER_BARS_MS
-  }, [barAnimSchedule])
-
-  const taskRowDotBaseDelaysMs = useMemo(
-    () =>
-      buildTaskRowDotBaseDelaysMs(
-        tasks,
-        GOAL_TASK_DOT_STAGGER_MS,
-        GOAL_TASK_ROW_GAP_MS,
-        GOAL_TASK_DOT_ANIM_MS,
-      ),
-    [tasks],
-  )
-
-  useEffect(() => {
-    if (!barsPlay) return
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    if (reduced) {
-      setTaskDotsPlay(true)
+  const commitMonthGoal = () => {
+    if (!onMonthlyGoalsChange) {
+      setMonthGoalEditing(false)
       return
     }
-    const id = window.setTimeout(() => setTaskDotsPlay(true), taskDotsDelayAfterBarsPlayMs)
-    return () => window.clearTimeout(id)
-  }, [barsPlay, taskDotsDelayAfterBarsPlayMs])
+    const v = monthGoalDraft.trim()
+    onMonthlyGoalsChange((prev) => {
+      const next = [...(Array.isArray(prev) ? prev : [])]
+      while (next.length < 12) next.push('')
+      next[selectedMonthIndex] = v
+      return next
+    })
+    setMonthGoalEditing(false)
+  }
 
   return (
     <div className={`goal-screen${barsPlay ? ' goal-screen--bars-play' : ''}`}>
@@ -572,258 +474,120 @@ export default function GoalScreen({
       </header>
 
       <div className="goal-scroll">
-        {useMultiYearSections ? (
-          <>
-            {yearSectionGroups.map(([calendarYear, slots]) => {
-              const yearTasks = collectTasksForYearSlots(slots)
-              const yearTaskDelays = buildTaskRowDotBaseDelaysMs(
-                yearTasks,
-                GOAL_TASK_DOT_STAGGER_MS,
-                GOAL_TASK_ROW_GAP_MS,
-                GOAL_TASK_DOT_ANIM_MS,
-              )
-              return (
-                <Fragment key={calendarYear}>
-                  <section className="goal-year-section" aria-label={`${calendarYear}년`}>
-                    <p className="goal-year-range-label">{formatSlotRangeLabel(slots)}</p>
-                    <div className="goal-grid">
-                      {slots.map((slot) => {
-                        const idx = slotIndexByKey.get(slot.key)
-                        if (idx === undefined) return null
-                        const targetPct = yearView.barTargetPcts[idx] ?? 0
-                        const { delayMs, riseMs } = barAnimSchedule[idx] ?? {
-                          delayMs: 0,
-                          riseMs: 0,
-                          targetPct: 0,
-                        }
-                        const isCurrent = idx === yearView.currentSlotIndex
-                        const monthReached =
-                          yearView.currentSlotIndex >= 0 ? idx <= yearView.currentSlotIndex : false
-                        const isSelected = selectedTimelineKey === slot.key
-                        const fillOpacity = targetPct >= 100 ? 0.55 : 1
-                        const barClass = [
-                          'goal-bar',
-                          targetPct <= 0 ? 'goal-bar--future' : '',
-                          isSelected ? 'goal-bar--selected' : '',
-                          isCurrent ? 'goal-bar--current' : '',
-                          targetPct > 0 ? 'goal-bar--filled' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')
+        <div className="goal-mbar-grid">
+          {Array.from({ length: 12 }, (_, i) => {
+            const m = i + 1
+            const ym = ymForYearMonth(gridYear, i)
+            const monthCards = trackerCards.filter(
+              (c) => c && typeof c === 'object' && c.activeMonthYm === ym,
+            )
+            const pct = averagePercent(monthCards)
+            const selected = selectedMonthIndex === i
+            const mbarAnimOn = barsPlay && !prefersReducedMotion
+            const mbarStaticOn = barsPlay && prefersReducedMotion
 
-                        return (
-                          <div key={slot.key} className="goal-bar-wrap">
-                            <button
-                              type="button"
-                              className={barClass}
-                              onClick={() => setSelectedTimelineKey(slot.key)}
-                            >
-                              {targetPct > 0 ? (
-                                <span
-                                  className={`goal-bar-fill${barsPlay ? ' goal-bar-fill--animate' : ''}`}
-                                  style={{
-                                    ['--fill-pct']: `${targetPct}%`,
-                                    ['--bar-rise-ms']: `${riseMs}ms`,
-                                    ['--bar-delay-ms']: `${delayMs}ms`,
-                                    background: `rgba(var(--ww-main-rgb), ${fillOpacity})`,
-                                  }}
-                                />
-                              ) : null}
-                              <GoalBarAnimatedPct
-                                target={targetPct}
-                                play={barsPlay}
-                                riseMs={riseMs}
-                                delayMs={delayMs}
-                              />
-                            </button>
-                            <span
-                              className={[
-                                'goal-month-label',
-                                monthReached ? 'goal-month-label--past' : 'goal-month-label--future',
-                              ].join(' ')}
-                            >
-                              {timelineBarLabel(slot, false)}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </section>
-                  <div className="goal-detail goal-detail--year-rollup">
-                    <div className="goal-detail-title">{calendarYear}년 작업 내역</div>
-                    {!isActiveGoalSettled ? (
-                      <p className="goal-detail-empty">목표 미정</p>
-                    ) : yearTasks.length > 0 ? (
-                      yearTasks.map((t, rowIndex) => (
-                        <TaskRow
-                          key={`${calendarYear}-${t._taskKey}`}
-                          name={t.name}
-                          done={t.done}
-                          dotsPlay={taskDotsPlay}
-                          rowDelayMs={yearTaskDelays[rowIndex] ?? 0}
-                          dotStaggerMs={GOAL_TASK_DOT_STAGGER_MS}
-                          reducedMotion={prefersReducedMotion}
-                        />
-                      ))
-                    ) : (
-                      <p className="goal-detail-empty">아직 작업 기록이 없어요</p>
-                    )}
-                  </div>
-                </Fragment>
-              )
-            })}
-          </>
-        ) : (
-          <>
-            <div className={`goal-grid${useDenseYearGrid ? ' goal-grid--dense' : ''}`}>
-              {goalScope === 'year'
-                ? yearView.slots.map((slot, idx) => {
-                    const targetPct = yearView.barTargetPcts[idx] ?? 0
-                    const { delayMs, riseMs } = barAnimSchedule[idx] ?? {
-                      delayMs: 0,
-                      riseMs: 0,
-                      targetPct: 0,
-                    }
-                    const isCurrent = idx === yearView.currentSlotIndex
-                    const monthReached =
-                      yearView.currentSlotIndex >= 0 ? idx <= yearView.currentSlotIndex : false
-                    const isSelected = selectedTimelineKey === slot.key
-                    const fillOpacity = targetPct >= 100 ? 0.55 : 1
-                    const barClass = [
-                      'goal-bar',
-                      targetPct <= 0 ? 'goal-bar--future' : '',
-                      isSelected ? 'goal-bar--selected' : '',
-                      isCurrent ? 'goal-bar--current' : '',
-                      targetPct > 0 ? 'goal-bar--filled' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')
+            return (
+              <div
+                key={i}
+                className="goal-mbar"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedMonthIndex(i)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedMonthIndex(i)
+                  }
+                }}
+              >
+                <div className={`goal-mbar-outer${selected ? ' goal-mbar-outer--selected' : ''}`}>
+                  {pct > 0 ? (
+                    <div
+                      className={[
+                        'goal-mbar-fill',
+                        !barsPlay ? 'goal-mbar-fill--idle' : '',
+                        mbarAnimOn ? 'goal-mbar-fill--animate' : '',
+                        mbarStaticOn ? 'goal-mbar-fill--shown' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      style={{
+                        ['--mbar-fill-pct']: `${pct}%`,
+                        ['--mbar-rise-ms']: `${pct >= 100 ? GOAL_MBAR_RISE_FAST_MS : GOAL_MBAR_RISE_CURRENT_MS}ms`,
+                        ['--mbar-delay-ms']: `${i * GOAL_MBAR_STAGGER_MS}ms`,
+                        opacity: Math.max(0.12, pct / 100),
+                      }}
+                    />
+                  ) : null}
+                  {pct > 0 ? <span className="goal-mbar-pct">{pct}%</span> : null}
+                </div>
+                <span className="goal-mbar-lbl">{m}월</span>
+              </div>
+            )
+          })}
+        </div>
 
-                    return (
-                      <div key={slot.key} className="goal-bar-wrap">
-                        <button
-                          type="button"
-                          className={barClass}
-                          onClick={() => setSelectedTimelineKey(slot.key)}
-                        >
-                          {targetPct > 0 ? (
-                            <span
-                              className={`goal-bar-fill${barsPlay ? ' goal-bar-fill--animate' : ''}`}
-                              style={{
-                                ['--fill-pct']: `${targetPct}%`,
-                                ['--bar-rise-ms']: `${riseMs}ms`,
-                                ['--bar-delay-ms']: `${delayMs}ms`,
-                                background: `rgba(var(--ww-main-rgb), ${fillOpacity})`,
-                              }}
-                            />
-                          ) : null}
-                          <GoalBarAnimatedPct
-                            target={targetPct}
-                            play={barsPlay}
-                            riseMs={riseMs}
-                            delayMs={delayMs}
-                          />
-                        </button>
-                        <span
-                          className={[
-                            'goal-month-label',
-                            monthReached ? 'goal-month-label--past' : 'goal-month-label--future',
-                          ].join(' ')}
-                        >
-                          {timelineBarLabel(slot, false)}
-                        </span>
-                      </div>
-                    )
-                  })
-                : dmSpec.segments.map((segLabel, idx) => {
-                    const { delayMs, riseMs, targetPct } = barAnimSchedule[idx]
-                    const segReached = idx <= dmCurrentSegIdx
-                    const isCurrent = idx === dmCurrentSegIdx
-                    const isSelected = selectedDmSegIdx === idx
-                    const fillOpacity = targetPct >= 100 ? 0.55 : 1
-                    const barClass = [
-                      'goal-bar',
-                      !segReached ? 'goal-bar--future' : '',
-                      isSelected ? 'goal-bar--selected' : '',
-                      isCurrent ? 'goal-bar--current' : '',
-                      targetPct > 0 ? 'goal-bar--filled' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')
-
-                    return (
-                      <div key={`${dmZoomId}-${idx}`} className="goal-bar-wrap">
-                        <button type="button" className={barClass} onClick={() => setSelectedDmSegIdx(idx)}>
-                          {targetPct > 0 ? (
-                            <span
-                              className={`goal-bar-fill${barsPlay ? ' goal-bar-fill--animate' : ''}`}
-                              style={{
-                                ['--fill-pct']: `${targetPct}%`,
-                                ['--bar-rise-ms']: `${riseMs}ms`,
-                                ['--bar-delay-ms']: `${delayMs}ms`,
-                                background: `rgba(var(--ww-main-rgb), ${fillOpacity})`,
-                              }}
-                            />
-                          ) : null}
-                          <GoalBarAnimatedPct
-                            target={targetPct}
-                            play={barsPlay}
-                            riseMs={riseMs}
-                            delayMs={delayMs}
-                          />
-                        </button>
-                        <span
-                          className={[
-                            'goal-month-label',
-                            segReached ? 'goal-month-label--past' : 'goal-month-label--future',
-                          ].join(' ')}
-                        >
-                          {segLabel}
-                        </span>
-                      </div>
-                    )
-                  })}
+        <div className="goal-month-panel">
+          <div className="goal-month-panel-head">
+            <div className="goal-month-panel-head-label-row">
+              <span className="goal-month-panel-head-dot" aria-hidden />
+              <span className="goal-month-panel-head-title">{selectedMonthIndex + 1}월 목표</span>
             </div>
 
-            {goalScope === 'year' && activeHorizon === '1' && selectedYearSlot ? (
-              <div className="goal-detail">
-                <div className="goal-detail-title">
-                  {selectedYearSlot.year}년 {monthLabel(selectedYearSlot.mm)} 작업 내역
-                </div>
-                {tasks.length > 0 ? (
-                  tasks.map((t, rowIndex) => (
-                    <TaskRow
-                      key={`${selectedTimelineKey}-${t.name}`}
-                      name={t.name}
-                      done={t.done}
-                      dotsPlay={taskDotsPlay}
-                      rowDelayMs={taskRowDotBaseDelaysMs[rowIndex] ?? 0}
-                      dotStaggerMs={GOAL_TASK_DOT_STAGGER_MS}
-                      reducedMotion={prefersReducedMotion}
-                    />
-                  ))
-                ) : (
-                  <p className="goal-detail-empty">아직 작업 기록이 없어요</p>
-                )}
-              </div>
-            ) : goalScope === 'dayMonth' ? (
-              <div className="goal-detail">
-                <div className="goal-detail-title">
-                  {getGoalDmDetailTitle(
-                    dmZoomId,
-                    dmSpec.segments[selectedDmSegIdx] ?? '—',
-                    dmSpec.label,
-                  )}
-                </div>
-                {!isActiveGoalSettled ? (
-                  <p className="goal-detail-empty">목표 미정</p>
-                ) : (
-                  <p className="goal-detail-empty">이 구간 작업은 추후 연동할 수 있어요</p>
-                )}
-              </div>
-            ) : null}
-          </>
-        )}
+            {monthGoalEditing ? (
+              <input
+                type="text"
+                className="goal-month-panel-goal-input"
+                value={monthGoalDraft}
+                autoFocus
+                onChange={(e) => setMonthGoalDraft(e.target.value)}
+                onBlur={commitMonthGoal}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                }}
+                aria-label={`${selectedMonthIndex + 1}월 목표 편집`}
+              />
+            ) : showMonthGoalEmpty ? (
+              <button type="button" className="goal-month-panel-goal-empty" onClick={beginEditMonthGoal}>
+                목표를 탭해서 추가해요
+              </button>
+            ) : (
+              <button type="button" className="goal-month-panel-goal-text" onClick={beginEditMonthGoal}>
+                {selectedMonthGoalText}
+              </button>
+            )}
+
+            <p className="goal-month-panel-head-hint">탭해서 수정 가능</p>
+          </div>
+
+          <div className="goal-month-panel-body">
+            <div className="goal-month-panel-body-label">{selectedMonthIndex + 1}월 작업 내역</div>
+            {cardsForSelectedMonth.length === 0 ? (
+              <p className="goal-month-panel-empty-tasks">이달 작업이 없어요</p>
+            ) : (
+              cardsForSelectedMonth.map((card, rowIndex) => {
+                const displayName =
+                  typeof card.displayTag === 'string'
+                    ? card.displayTag
+                    : typeof card.title === 'string'
+                      ? card.title
+                      : '작업'
+                const done = filledWorkDots(card)
+                return (
+                  <GoalPanelWorkRow
+                    key={String(card.id)}
+                    name={displayName}
+                    done={done}
+                    carry={Boolean(card.isCarryOver)}
+                    rowDelayMs={workRowDotBaseDelaysMs[rowIndex] ?? 0}
+                    dotsPlay={taskDotsPlay}
+                    reducedMotion={prefersReducedMotion}
+                  />
+                )
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       <nav className="goal-nav" aria-label="하단 메뉴">
