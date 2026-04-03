@@ -309,13 +309,13 @@
 }
 
 .mt-card--key {
-  background: rgba(45, 212, 191, 0.04);
-  border: 1px solid rgba(45, 212, 191, 0.3);
+  background: rgba(var(--ww-sub-rgb), 0.04);
+  border: 1px solid rgba(var(--ww-sub-rgb), 0.3);
 }
 
 .mt-card--carry {
-  background: rgba(45, 212, 191, 0.03);
-  border: 1px solid rgba(45, 212, 191, 0.2);
+  background: rgba(var(--ww-main-rgb), 0.035);
+  border: 1px solid rgba(var(--ww-main-rgb), 0.22);
 }
 
 .mt-card-head {
@@ -356,15 +356,15 @@
 }
 
 .mt-card-badge--key {
-  background: rgba(45, 212, 191, 0.12);
-  border: 1px solid rgba(45, 212, 191, 0.25);
-  color: #2dd4bf;
+  background: rgba(var(--ww-sub-rgb), 0.12);
+  border: 1px solid rgba(var(--ww-sub-rgb), 0.25);
+  color: var(--ww-sub);
 }
 
 .mt-card-badge--carry {
-  background: rgba(45, 212, 191, 0.1);
-  border: 1px solid rgba(45, 212, 191, 0.2);
-  color: #2dd4bf;
+  background: rgba(var(--ww-main-rgb), 0.1);
+  border: 1px solid rgba(var(--ww-main-rgb), 0.22);
+  color: var(--ww-main);
 }
 
 .mt-card-tag {
@@ -383,22 +383,23 @@
   flex-shrink: 0;
 }
 
-/* 일반: 메인(주황) */
+/* 일반·이월: 메인 */
 .mt-card--normal .mt-card-tag,
-.mt-card--normal .mt-card-pct {
-  color: #fb923c;
-}
-
-/* 핵심 / 이월: 틸 */
-.mt-card--key .mt-card-tag,
-.mt-card--key .mt-card-pct {
-  color: #2dd4bf;
+.mt-card--normal .mt-card-pct,
+.mt-card--carry .mt-card-tag,
+.mt-card--carry .mt-card-pct {
+  color: var(--ww-main);
 }
 
 .mt-card--carry .mt-card-tag,
 .mt-card--carry .mt-card-pct {
-  color: #2dd4bf;
   opacity: 0.7;
+}
+
+/* 핵심: 서브 */
+.mt-card--key .mt-card-tag,
+.mt-card--key .mt-card-pct {
+  color: var(--ww-sub);
 }
 
 .mt-card-bar {
@@ -417,15 +418,15 @@
 }
 
 .mt-card--normal .mt-card-bar-fill {
-  background: #fb923c;
+  background: var(--ww-main);
 }
 
 .mt-card-bar-fill--key {
-  background: #2dd4bf;
+  background: var(--ww-sub);
 }
 
 .mt-card-bar-fill--carry {
-  background: rgba(45, 212, 191, 0.65);
+  background: rgba(var(--ww-main-rgb), 0.65);
 }
 
 .mt-card-bar-fill--active {
@@ -448,7 +449,7 @@
   font-weight: 400;
   line-height: 1.45;
   letter-spacing: 0.04em;
-  color: rgba(45, 212, 191, 0.7);
+  color: rgba(var(--ww-sub-rgb), 0.72);
 }
 
 .mt-detail-row {
@@ -493,24 +494,26 @@
   transform: rotate(45deg);
 }
 
-/* 일반 카드: 스테이지만 체크 시 메인(주황) */
-.mt-card--normal .mt-check--on.mt-check--stage-main {
-  background: rgba(251, 146, 60, 0.15);
-  border-color: #fb923c;
+/* 일반·이월: 스테이지 강조 체크는 메인 */
+.mt-card--normal .mt-check--on.mt-check--stage-main,
+.mt-card--carry .mt-check--on.mt-check--stage-main {
+  background: rgba(var(--ww-main-rgb), 0.15);
+  border-color: var(--ww-main);
 }
 
-.mt-card--normal .mt-check--on.mt-check--stage-main::after {
-  border-color: #fb923c;
+.mt-card--normal .mt-check--on.mt-check--stage-main::after,
+.mt-card--carry .mt-check--on.mt-check--stage-main::after {
+  border-color: var(--ww-main);
 }
 
-/* 완성 확정 후 일괄 체크: 서브(틸) */
+/* 완성 확정 후 일괄 체크: 서브 */
 .mt-check--on.mt-check--sealed {
-  background: rgba(45, 212, 191, 0.15);
-  border-color: #2dd4bf;
+  background: rgba(var(--ww-sub-rgb), 0.15);
+  border-color: var(--ww-sub);
 }
 
 .mt-check--on.mt-check--sealed::after {
-  border-color: #2dd4bf;
+  border-color: var(--ww-sub);
 }
 
 .mt-detail-label {
@@ -532,9 +535,13 @@
 }
 
 .mt-detail-stage-text:focus-visible {
-  outline: 1px solid rgba(251, 146, 60, 0.45);
+  outline: 1px solid rgba(var(--ww-main-rgb), 0.45);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+.mt-card--key .mt-detail-stage-text:focus-visible {
+  outline-color: rgba(var(--ww-sub-rgb), 0.45);
 }
 
 .mt-detail-stage-input {
@@ -544,7 +551,7 @@
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.04);
   border: none;
-  border-bottom: 1px solid rgba(251, 146, 60, 0.4);
+  border-bottom: 1px solid rgba(var(--ww-main-rgb), 0.4);
   border-radius: 4px 4px 0 0;
   padding: 2px 6px;
   color: #ffffff;
@@ -556,6 +563,10 @@
   outline: none;
 }
 
+.mt-card--key .mt-detail-stage-input {
+  border-bottom-color: rgba(var(--ww-sub-rgb), 0.42);
+}
+
 .mt-detail-row--done .mt-detail-label {
   color: var(--ww-sub);
 }
@@ -564,38 +575,40 @@
   color: var(--ww-sub);
 }
 
-.mt-card--normal .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-label {
-  color: #fb923c;
+.mt-card--normal .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-label,
+.mt-card--carry .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-label {
+  color: var(--ww-main);
 }
 
-.mt-card--normal .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-stage-text {
-  color: #fb923c;
+.mt-card--normal .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-stage-text,
+.mt-card--carry .mt-detail-row--done:not(.mt-detail-row--sealed) .mt-detail-stage-text {
+  color: var(--ww-main);
 }
 
 .mt-detail-row--sealed .mt-detail-label {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-detail-row--sealed .mt-detail-stage-text {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-card--key .mt-detail-row--done .mt-detail-label,
 .mt-card--key .mt-check--on:not(.mt-check--stage-main) {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-card--key .mt-detail-row--done .mt-detail-stage-text {
-  color: #2dd4bf;
+  color: var(--ww-sub);
 }
 
 .mt-card--key .mt-check--on {
-  background: rgba(45, 212, 191, 0.15);
-  border-color: #2dd4bf;
+  background: rgba(var(--ww-sub-rgb), 0.15);
+  border-color: var(--ww-sub);
 }
 
 .mt-card--key .mt-check--on::after {
-  border-color: #2dd4bf;
+  border-color: var(--ww-sub);
 }
 
 .mt-card--carry .mt-gallery-send:not(.mt-gallery-send--empty) {
@@ -610,10 +623,6 @@
   opacity: 0.7;
 }
 
-.mt-card--key .mt-gallery-send:not(.mt-gallery-send--empty) {
-  border-color: rgba(45, 212, 191, 0.45);
-  color: rgba(45, 212, 191, 0.85);
-}
 
 .mt-complete-block {
   display: flex;
@@ -641,7 +650,7 @@
   overflow: hidden;
   flex: 1;
   min-width: 0;
-  height: 36px;
+  min-height: 36px;
   box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -660,29 +669,76 @@
   z-index: 1;
 }
 
-.mt-complete-btn--on {
-  background: rgba(45, 212, 191, 0.12);
-  border-color: rgba(45, 212, 191, 0.4);
-  color: #2dd4bf;
+/* 일반·이월 — 완성 버튼 (메인) */
+.mt-card--normal .mt-complete-btn:not(.mt-complete-btn--on):not(.mt-complete-btn--ready),
+.mt-card--carry .mt-complete-btn:not(.mt-complete-btn--on):not(.mt-complete-btn--ready) {
+  background: rgba(var(--ww-main-rgb), 0.06);
+  border-color: rgba(var(--ww-main-rgb), 0.15);
+  color: rgba(var(--ww-main-rgb), 0.4);
 }
 
-/* 3/3 스테이지 채움 — 카운터·버튼 (틸, 그라데이션 보더) */
-.mt-complete-block--ready .mt-complete-counter {
-  color: rgba(45, 212, 191, 0.7);
+.mt-card--normal .mt-complete-btn--on,
+.mt-card--carry .mt-complete-btn--on {
+  background: rgba(var(--ww-main-rgb), 0.12);
+  border-color: var(--ww-main);
+  color: var(--ww-main);
+}
+
+/* 핵심 카드 — 완성 버튼 (서브) */
+.mt-card--key .mt-complete-btn:not(.mt-complete-btn--on):not(.mt-complete-btn--ready) {
+  background: rgba(var(--ww-sub-rgb), 0.06);
+  border-color: rgba(var(--ww-sub-rgb), 0.15);
+  color: rgba(var(--ww-sub-rgb), 0.4);
+}
+
+.mt-card--key .mt-complete-btn--on {
+  background: rgba(var(--ww-sub-rgb), 0.12);
+  border-color: var(--ww-sub);
+  color: var(--ww-sub);
+}
+
+/* 3/3 스테이지 채움 — 카운터 */
+.mt-card--normal .mt-complete-block--ready .mt-complete-counter,
+.mt-card--carry .mt-complete-block--ready .mt-complete-counter {
+  color: rgba(var(--ww-main-rgb), 0.75);
   letter-spacing: 0.06em;
 }
 
-.mt-complete-btn--ready:not(.mt-complete-btn--on) {
-  color: rgba(204, 251, 241, 0.92);
+.mt-card--key .mt-complete-block--ready .mt-complete-counter {
+  color: rgba(var(--ww-sub-rgb), 0.72);
+  letter-spacing: 0.06em;
+}
+
+.mt-card--normal .mt-complete-btn--ready:not(.mt-complete-btn--on),
+.mt-card--carry .mt-complete-btn--ready:not(.mt-complete-btn--on) {
+  color: color-mix(in srgb, var(--ww-main) 14%, #ffffff);
   border: 1px solid transparent;
   background:
-    linear-gradient(168deg, rgba(22, 26, 28, 0.97) 0%, rgba(18, 28, 28, 0.98) 100%) padding-box,
+    linear-gradient(168deg, rgba(22, 22, 22, 0.97) 0%, rgba(18, 18, 18, 0.98) 100%) padding-box,
     linear-gradient(
       118deg,
-      rgba(45, 212, 191, 0.22) 0%,
-      rgba(45, 212, 191, 0.5) 42%,
-      rgba(20, 184, 166, 0.38) 58%,
-      rgba(45, 212, 191, 0.2) 100%
+      rgba(var(--ww-main-rgb), 0.28) 0%,
+      rgba(var(--ww-main-rgb), 0.52) 42%,
+      rgba(var(--ww-main-rgb), 0.38) 58%,
+      rgba(var(--ww-main-rgb), 0.24) 100%
+    )
+    border-box;
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.mt-card--key .mt-complete-btn--ready:not(.mt-complete-btn--on) {
+  color: color-mix(in srgb, var(--ww-sub) 18%, #ffffff);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(168deg, rgba(22, 22, 24, 0.97) 0%, rgba(18, 20, 22, 0.98) 100%) padding-box,
+    linear-gradient(
+      118deg,
+      rgba(var(--ww-sub-rgb), 0.22) 0%,
+      rgba(var(--ww-sub-rgb), 0.5) 42%,
+      rgba(var(--ww-sub-rgb), 0.36) 58%,
+      rgba(var(--ww-sub-rgb), 0.2) 100%
     )
     border-box;
   background-clip: padding-box, border-box;
@@ -705,12 +761,24 @@
     90deg,
     transparent 0%,
     rgba(255, 255, 255, 0.04) 35%,
-    rgba(45, 212, 191, 0.18) 50%,
+    rgba(var(--ww-sub-rgb), 0.18) 50%,
     rgba(255, 255, 255, 0.03) 65%,
     transparent 100%
   );
   transform: translate3d(0, 0, 0) rotate(18deg);
   animation: mt-complete-shimmer 0.92s cubic-bezier(0.33, 1, 0.68, 1) 1 forwards;
+}
+
+.mt-card--normal .mt-complete-btn-shimmer,
+.mt-card--carry .mt-complete-btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 35%,
+    rgba(var(--ww-main-rgb), 0.22) 50%,
+    rgba(255, 255, 255, 0.03) 65%,
+    transparent 100%
+  );
 }
 
 @keyframes mt-complete-shimmer {
@@ -746,6 +814,10 @@
   outline-offset: 2px;
 }
 
+.mt-card--key .mt-complete-btn:focus-visible {
+  outline-color: var(--ww-sub);
+}
+
 /* —— Image slots —— */
 .mt-slots {
   display: flex;
@@ -765,15 +837,25 @@
   justify-content: center;
 }
 
+/* 일반·이월: + 슬롯 메인 */
 .mt-slot--empty {
+  background: rgba(var(--ww-main-rgb), 0.1);
+  border: 1px dashed rgba(var(--ww-main-rgb), 0.3);
+}
+
+.mt-card--key .mt-slot--empty {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(var(--ww-sub-rgb), 0.35);
 }
 
 .mt-slot-plus {
-  color: var(--ww-sub);
+  color: var(--ww-main);
   width: 18px;
   height: 18px;
+}
+
+.mt-card--key .mt-slot-plus {
+  color: var(--ww-sub);
 }
 
 .mt-slot--filled {
@@ -787,27 +869,59 @@
   object-fit: cover;
 }
 
-/* 전신/반신(teal 카드) 태그·%와 동일 var(--ww-sub) — 이미지 있을 때만 밝게 */
+/* 일반·이월: 갤러리 보내기 메인 */
 .mt-gallery-send {
   width: 100%;
-  padding: 11px;
-  border-radius: 6px;
-  border: 1px solid rgba(var(--ww-sub-rgb), 0.35);
-  background: rgba(var(--ww-sub-rgb), 0.06);
-  color: rgba(var(--ww-sub-rgb), 0.45);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--ww-main-rgb), 0.3);
+  background: rgba(var(--ww-main-rgb), 0.1);
+  color: var(--ww-main);
   font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: none;
   cursor: pointer;
   box-sizing: border-box;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .mt-gallery-send:not(.mt-gallery-send--empty) {
+  border-color: rgba(var(--ww-main-rgb), 0.45);
+  background: rgba(var(--ww-main-rgb), 0.12);
+  color: var(--ww-main);
+}
+
+.mt-gallery-send.mt-gallery-send--empty {
+  color: rgba(var(--ww-main-rgb), 0.35);
+  border-color: rgba(var(--ww-main-rgb), 0.12);
+  background: rgba(var(--ww-main-rgb), 0.04);
+}
+
+/* 핵심 카드: 서브 */
+.mt-card--key .mt-gallery-send {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--ww-sub-rgb), 0.35);
+  background: rgba(var(--ww-sub-rgb), 0.06);
+  color: rgba(var(--ww-sub-rgb), 0.88);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.mt-card--key .mt-gallery-send:not(.mt-gallery-send--empty) {
   border-color: var(--ww-sub);
   background: rgba(var(--ww-sub-rgb), 0.1);
   color: var(--ww-sub);
+}
+
+.mt-card--key .mt-gallery-send.mt-gallery-send--empty {
+  color: rgba(var(--ww-sub-rgb), 0.35);
+  border-color: rgba(var(--ww-sub-rgb), 0.12);
+  background: rgba(var(--ww-sub-rgb), 0.04);
 }
 
 .mt-gallery-send--empty {
@@ -817,6 +931,10 @@
 .mt-gallery-send:focus-visible {
   outline: 2px solid var(--ww-main);
   outline-offset: 2px;
+}
+
+.mt-card--key .mt-gallery-send:focus-visible {
+  outline-color: var(--ww-sub);
 }
 
 /* —— 이미지 없이 갤러리 보내기 시 안내 (앱/폰 프레임 안 중앙, 카드 폭) —— */

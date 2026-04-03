@@ -626,6 +626,8 @@ function App() {
             onGoalTextsChange={setGoalTexts}
             goalStartDate={goalStartDate}
             onGoalStartDateChange={setGoalStartDate}
+            monthlyGoals={monthlyGoals}
+            onMonthlyGoalsChange={setMonthlyGoals}
           />
         ) : (
           <MainTracker

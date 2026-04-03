@@ -1,7 +1,22 @@
 import { useCallback, useState } from 'react'
 import { APP_THEME_PRESETS } from './appTheme.js'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
-import { createEmptyGoalTexts, GOAL_DAY_MONTH_ROWS, GOAL_YEAR_ROWS } from './goalConfig.js'
+import { createEmptyGoalTexts } from './goalConfig.js'
+
+/** 설정 GOALS · DAY 탭 (goalTexts 키는 기존 dm_* 와 동일) */
+const GOAL_TAB_DAY_ROWS = [
+  { id: 'dm_1d', label: '1 day' },
+  { id: 'dm_3d', label: '3 days' },
+  { id: 'dm_7d', label: '7 days' },
+  { id: 'dm_15d', label: '15 days' },
+]
+
+const GOAL_TAB_YEAR_ROWS = [
+  { id: '1y', label: '1 year' },
+  { id: '3y', label: '3 years' },
+  { id: '5y', label: '5 years' },
+  { id: '10y', label: '10 years' },
+]
 import './SettingScreen.css'
 
 /** 스플래시와 동일 W 곡선 + 점 (viewBox 0 0 500 500) */
@@ -32,11 +47,8 @@ function SettingsMarkSvg({ size, className = '' }) {
 }
 
 const FEATURE_ROWS = [
-  { key: 'workTimer', label: '작업 타이머' },
-  { key: 'selfFeedback', label: '셀프 피드백 / 별점' },
   { key: 'gallery', label: '갤러리' },
   { key: 'goalScreen', label: '목표 화면' },
-  { key: 'imageUploadSlot', label: '이미지 업로드 슬롯' },
 ]
 
 /**
@@ -52,6 +64,8 @@ const FEATURE_ROWS = [
  *   onGoalTextsChange: (value: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
  *   goalStartDate: string
  *   onGoalStartDateChange: (value: string) => void
+ *   monthlyGoals: string[]
+ *   onMonthlyGoalsChange: (value: string[] | ((prev: string[]) => string[])) => void
  * }} props
  */
 export default function SettingScreen({
@@ -66,10 +80,14 @@ export default function SettingScreen({
   onGoalTextsChange,
   goalStartDate,
   onGoalStartDateChange,
+  monthlyGoals,
+  onMonthlyGoalsChange,
 }) {
   const [nickname, setNickname] = useState('')
   const [creativeField, setCreativeField] = useState('')
   const [goalOpenId, setGoalOpenId] = useState(/** @type {string | null} */ (null))
+  const [activeGoalTab, setActiveGoalTab] = useState(/** @type {'day' | 'month' | 'year'} */ ('day'))
+  const [expandedMonth, setExpandedMonth] = useState(/** @type {number | null} */ (null))
   const toggleFeature = useCallback(
     (key) => {
       onFeaturesChange((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -84,6 +102,8 @@ export default function SettingScreen({
     onGoalTextsChange(createEmptyGoalTexts())
     onGoalStartDateChange('')
     setGoalOpenId(null)
+    setExpandedMonth(null)
+    setActiveGoalTab('day')
     onResetApp()
   }
 
@@ -154,70 +174,157 @@ export default function SettingScreen({
         <section className="setting-section">
           <h2 className="setting-section-label">GOALS</h2>
           <div className="setting-card setting-card--goals">
-            <h3 className="setting-goals-subheading">DAY · MONTH</h3>
-            {GOAL_DAY_MONTH_ROWS.map((row, idx) => (
-              <div key={row.id}>
-                {idx > 0 ? <div className="setting-divider" /> : null}
-                <div className="setting-goal-block">
-                  <button
-                    type="button"
-                    className="setting-row setting-row--chevron"
-                    onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
-                  >
-                    <span className="setting-row-label">{row.label} 목표 수정</span>
-                    <span className="setting-row-chevron">수정 ›</span>
-                  </button>
-                  {goalOpenId === row.id ? (
-                    <textarea
-                      className="setting-goal-textarea"
-                      rows={3}
-                      value={goalTexts[row.id] ?? ''}
-                      onChange={(e) =>
-                        onGoalTextsChange((prev) => ({ ...prev, [row.id]: e.target.value }))
-                      }
-                    />
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="setting-card setting-card--goals">
-            <h3 className="setting-goals-subheading">YEAR</h3>
-            {GOAL_YEAR_ROWS.map((row, idx) => (
-              <div key={row.id}>
-                {idx > 0 ? <div className="setting-divider" /> : null}
-                <div className="setting-goal-block">
-                  <button
-                    type="button"
-                    className="setting-row setting-row--chevron"
-                    onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
-                  >
-                    <span className="setting-row-label">{row.label}</span>
-                    <span className="setting-row-chevron">수정 ›</span>
-                  </button>
-                  {goalOpenId === row.id ? (
-                    <textarea
-                      className="setting-goal-textarea"
-                      rows={3}
-                      value={goalTexts[row.id] ?? ''}
-                      onChange={(e) =>
-                        onGoalTextsChange((prev) => ({ ...prev, [row.id]: e.target.value }))
-                      }
-                    />
-                  ) : null}
-                </div>
-              </div>
-            ))}
-            <div className="setting-divider" />
-            <div className="setting-row setting-row--input">
-              <span className="setting-row-label">시작 날짜</span>
-              <input
-                type="date"
-                className="setting-input-date"
-                value={goalStartDate}
-                onChange={(e) => onGoalStartDateChange(e.target.value)}
-              />
+            <div className="setting-goals-tabs" role="tablist" aria-label="목표 구간">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeGoalTab === 'day'}
+                className={`setting-goals-tab${activeGoalTab === 'day' ? ' setting-goals-tab--active' : ''}`}
+                onClick={() => setActiveGoalTab('day')}
+              >
+                DAY
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeGoalTab === 'month'}
+                className={`setting-goals-tab${activeGoalTab === 'month' ? ' setting-goals-tab--active' : ''}`}
+                onClick={() => setActiveGoalTab('month')}
+              >
+                MONTH
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeGoalTab === 'year'}
+                className={`setting-goals-tab${activeGoalTab === 'year' ? ' setting-goals-tab--active' : ''}`}
+                onClick={() => setActiveGoalTab('year')}
+              >
+                YEAR
+              </button>
             </div>
+
+            {activeGoalTab === 'day' ? (
+              <div role="tabpanel" aria-label="DAY">
+                {GOAL_TAB_DAY_ROWS.map((row, idx) => (
+                  <div key={row.id}>
+                    {idx > 0 ? <div className="setting-divider" /> : null}
+                    <div className="setting-goal-block">
+                      <button
+                        type="button"
+                        className="setting-row setting-row--chevron"
+                        onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
+                      >
+                        <span className="setting-row-label setting-row-label--goal-en">{row.label}</span>
+                        <span className="setting-row-chevron">수정 ›</span>
+                      </button>
+                      {goalOpenId === row.id ? (
+                        <textarea
+                          className="setting-goal-textarea"
+                          rows={3}
+                          value={goalTexts[row.id] ?? ''}
+                          onChange={(e) =>
+                            onGoalTextsChange((prev) => ({ ...prev, [row.id]: e.target.value }))
+                          }
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {activeGoalTab === 'month' ? (
+              <div role="tabpanel" aria-label="MONTH">
+                {Array.from({ length: 12 }, (_, monthIndex) => {
+                  const padded = String(monthIndex + 1).padStart(2, '0')
+                  const raw = monthlyGoals[monthIndex] ?? ''
+                  const normalized = raw.replace(/\s+/g, ' ').trim()
+                  const hasValue = normalized.length > 0
+                  const preview =
+                    hasValue && normalized.length > 10
+                      ? `${normalized.slice(0, 10)}…`
+                      : normalized
+                  return (
+                    <div key={monthIndex}>
+                      {monthIndex > 0 ? <div className="setting-divider" /> : null}
+                      <div className="setting-goal-block">
+                        <button
+                          type="button"
+                          className="setting-row setting-row--chevron setting-row--month-goal"
+                          onClick={() =>
+                            setExpandedMonth((o) => (o === monthIndex ? null : monthIndex))
+                          }
+                        >
+                          <span className="setting-month-label">{padded}월</span>
+                          <span
+                            className={`setting-month-preview${hasValue ? '' : ' setting-month-preview--empty'}`}
+                          >
+                            {hasValue ? preview : '미입력'}
+                          </span>
+                        </button>
+                        {expandedMonth === monthIndex ? (
+                          <textarea
+                            className="setting-month-textarea"
+                            rows={3}
+                            value={monthlyGoals[monthIndex] ?? ''}
+                            onChange={(e) => {
+                              const v = e.target.value
+                              onMonthlyGoalsChange((prev) => {
+                                const next = [...prev]
+                                while (next.length < 12) next.push('')
+                                next[monthIndex] = v
+                                return next
+                              })
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            {activeGoalTab === 'year' ? (
+              <div role="tabpanel" aria-label="YEAR">
+                {GOAL_TAB_YEAR_ROWS.map((row, idx) => (
+                  <div key={row.id}>
+                    {idx > 0 ? <div className="setting-divider" /> : null}
+                    <div className="setting-goal-block">
+                      <button
+                        type="button"
+                        className="setting-row setting-row--chevron"
+                        onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
+                      >
+                        <span className="setting-row-label setting-row-label--goal-en">{row.label}</span>
+                        <span className="setting-row-chevron">수정 ›</span>
+                      </button>
+                      {goalOpenId === row.id ? (
+                        <textarea
+                          className="setting-goal-textarea"
+                          rows={3}
+                          value={goalTexts[row.id] ?? ''}
+                          onChange={(e) =>
+                            onGoalTextsChange((prev) => ({ ...prev, [row.id]: e.target.value }))
+                          }
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+                <div className="setting-divider" />
+                <div className="setting-row setting-row--input">
+                  <span className="setting-row-label">시작 날짜</span>
+                  <input
+                    type="date"
+                    className="setting-input-date"
+                    value={goalStartDate}
+                    onChange={(e) => onGoalStartDateChange(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 

@@ -706,49 +706,54 @@
   background: rgba(251, 146, 60, 0.06);
 }
 
-/* height는 %로 고정, 차오름은 scaleY — keyframes에 var() 높이 보간은 브라우저에서 무시되는 경우가 많음 */
+/* 12개월 막대 fill — 연쇄 애니 전 height 0, 목표는 CSS 변수 */
 .goal-mbar-fill {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   width: 100%;
-  height: var(--mbar-fill-pct, 0%);
+  height: 0;
   max-height: 100%;
   border-radius: 5px;
   background: #fb923c;
   box-sizing: border-box;
-  transform-origin: bottom center;
+  transform: none;
   z-index: 0;
 }
 
-.goal-mbar-fill--idle {
-  transform: scaleY(0);
+.goal-mbar-fill--cascade-idle {
+  height: 0 !important;
+  opacity: 0.3;
 }
 
-.goal-mbar-fill--shown {
-  transform: scaleY(1);
+.goal-mbar-fill--cascade-static {
+  height: var(--target-height);
+  opacity: 1;
 }
 
-/* 탭 진입 시 아래에서 막대가 차오름 */
-.goal-screen--bars-play .goal-mbar-fill--animate {
-  animation: goal-mbar-rise-scale var(--mbar-rise-ms, 1100ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: var(--mbar-delay-ms, 0ms);
+.goal-mbar-fill--cascade {
+  animation: goal-mbar-cascade-rise var(--cascade-duration, 600ms) cubic-bezier(0.34, 1.56, 0.64, 1)
+    var(--cascade-delay, 0ms) both;
 }
 
-@keyframes goal-mbar-rise-scale {
+/* 단일 상승 — 피크·딥 키프레임은 ‘두 번 올라가는’ 것처럼 보여 제거 */
+@keyframes goal-mbar-cascade-rise {
   from {
-    transform: scaleY(0);
+    height: 0%;
+    opacity: 0.3;
   }
   to {
-    transform: scaleY(1);
+    height: var(--target-height);
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .goal-screen--bars-play .goal-mbar-fill--animate {
-    animation: none;
-    transform: scaleY(1) !important;
+  .goal-mbar-fill--cascade {
+    animation: none !important;
+    height: var(--target-height) !important;
+    opacity: 1 !important;
   }
 }
 
@@ -759,7 +764,7 @@
   right: 0;
   text-align: center;
   font-family: 'DM Mono', monospace;
-  font-size: 6px;
+  font-size: 7px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.4);
   line-height: 1;
@@ -769,7 +774,7 @@
 
 .goal-mbar-lbl {
   font-family: 'DM Mono', monospace;
-  font-size: 7px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--ww-main);

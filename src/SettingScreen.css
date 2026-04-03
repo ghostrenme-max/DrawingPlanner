@@ -102,6 +102,90 @@
   text-transform: uppercase;
 }
 
+.setting-goals-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.setting-goals-tab {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.setting-goals-tab--active {
+  background: rgba(var(--ww-main-rgb), 0.12);
+  border: 1px solid var(--ww-main);
+  color: var(--ww-main);
+}
+
+.setting-goals-tab:focus-visible {
+  outline: 2px solid var(--ww-main);
+  outline-offset: 2px;
+}
+
+.setting-row-label--goal-en {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.setting-row--month-goal {
+  align-items: center;
+}
+
+.setting-month-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ww-main);
+  flex-shrink: 0;
+}
+
+.setting-month-preview {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: right;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setting-month-preview--empty {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.setting-month-textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(var(--ww-main-rgb), 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.setting-month-textarea:focus {
+  border-color: rgba(var(--ww-main-rgb), 0.45);
+}
 
 .setting-row {
   display: flex;
@@ -202,16 +286,40 @@
 }
 
 .setting-input-date {
+  position: relative;
   background: transparent;
   border: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--ww-main);
   font-family: 'DM Mono', monospace;
   font-size: 10px;
   text-align: right;
   padding: 6px 0 4px;
   outline: none;
   min-width: 120px;
+}
+
+/* 캘린더 아이콘 숨김 — 입력 영역 전체로 네이티브 피커 유지 */
+.setting-input-date::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.setting-input-date::-webkit-datetime-edit,
+.setting-input-date::-webkit-datetime-edit-fields-wrapper,
+.setting-input-date::-webkit-datetime-edit-text {
+  color: var(--ww-main);
+}
+
+.setting-input-date:focus {
+  border-bottom-color: rgba(var(--ww-main-rgb), 0.45);
 }
 
 .setting-divider {

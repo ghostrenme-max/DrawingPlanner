@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import {
   applyGoalDisplayBreaks,
@@ -21,10 +21,39 @@ const GOAL_HEADER_BAR_MS = 980
 
 const GOAL_PROGRESS_PERCENT = 33
 
-/** 월 막대 상승 — 지난 달·완료 구간은 짧게, 진행 중은 길게 (기존 GoalScreen 타이밍) */
-const GOAL_MBAR_RISE_FAST_MS = 380
-const GOAL_MBAR_RISE_CURRENT_MS = 1100
-const GOAL_MBAR_STAGGER_MS = 85
+/** 12개월 막대 연쇄: 진행률별 duration (100%→600ms …) */
+function getBarDurationMs(progress) {
+  const p = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)))
+  if (p <= 0) return 0
+  if (p >= 100) return 600
+  if (p <= 33) return Math.round((250 * p) / 33)
+  if (p <= 60) return Math.round(250 + (150 * (p - 33)) / 27)
+  return Math.round(400 + (200 * (p - 60)) / 40)
+}
+
+/** 이전 달이 85% 이상이면 그 달 애니의 85% 시점에서 다음 달 시작 */
+function getCascadeStartDelay(monthIndex, progressArray) {
+  let delay = 0
+  for (let i = 0; i < monthIndex; i++) {
+    const prev = progressArray[i] ?? 0
+    const d = getBarDurationMs(prev)
+    if (d <= 0) continue
+    delay += prev >= 85 ? d * 0.85 : d
+  }
+  return Math.round(delay)
+}
+
+function getCascadeTotalEndMs(progressArray) {
+  let maxEnd = 0
+  for (let i = 0; i < 12; i++) {
+    const p = progressArray[i] ?? 0
+    const d = getBarDurationMs(p)
+    if (d <= 0) continue
+    const start = getCascadeStartDelay(i, progressArray)
+    maxEnd = Math.max(maxEnd, start + d)
+  }
+  return maxEnd
+}
 
 const GOAL_WORK_DOTS = 5
 /** 작업 행 도트 — 기존 GoalScreen TaskRow 타이밍 */
@@ -165,6 +194,7 @@ export default function GoalScreen({
   const [monthGoalDraft, setMonthGoalDraft] = useState('')
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [taskDotsPlay, setTaskDotsPlay] = useState(false)
+  const [startAnim, setStartAnim] = useState(false)
 
   const goals12 = useMemo(() => {
     const g = Array.isArray(monthlyGoals) ? [...monthlyGoals] : []
@@ -176,6 +206,18 @@ export default function GoalScreen({
     const ym = ymForYearMonth(gridYear, selectedMonthIndex)
     return trackerCards.filter((c) => c && typeof c === 'object' && c.activeMonthYm === ym)
   }, [trackerCards, gridYear, selectedMonthIndex])
+
+  const monthProgress = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, mi) => {
+        const ym = ymForYearMonth(gridYear, mi)
+        const monthCards = trackerCards.filter(
+          (c) => c && typeof c === 'object' && c.activeMonthYm === ym,
+        )
+        return averagePercent(monthCards)
+      }),
+    [trackerCards, gridYear],
+  )
 
   const workRowsDone = useMemo(
     () => cardsForSelectedMonth.map((c) => filledWorkDots(c)),
@@ -208,25 +250,63 @@ export default function GoalScreen({
 
   useEffect(() => {
     setBarsPlay(false)
+    setStartAnim(false)
     setTaskDotsPlay(false)
     setHeaderPctDisplay(0)
     const t = window.setTimeout(() => setBarsPlay(true), 80)
     return () => window.clearTimeout(t)
   }, [goalScope, dmZoomId, activeHorizon])
 
-  /** 월 막대 상승이 끝난 뒤 작업 도트·이름 이펙트 재생 */
+  const monthProgressRef = useRef(monthProgress)
+  monthProgressRef.current = monthProgress
+
+  /**
+   * 연쇄 애니 중에는 진행률 스냅샷 고정 — trackerCards 갱신으로 CSS 변수가 바뀌며 애니가 처음부터 다시 도는 것 방지
+   */
+  const [mbarSnap, setMbarSnap] = useState(/** @type {number[] | null} */ (null))
+
+  useLayoutEffect(() => {
+    if (!barsPlay || !startAnim || prefersReducedMotion) {
+      setMbarSnap(null)
+      return
+    }
+    setMbarSnap([...monthProgressRef.current])
+  }, [barsPlay, startAnim, prefersReducedMotion])
+
+  /** 막대 연쇄: barsPlay 후 400ms 뒤 트리거 */
+  useEffect(() => {
+    setStartAnim(false)
+    if (!barsPlay) return
+    const t = window.setTimeout(() => setStartAnim(true), 400)
+    return () => window.clearTimeout(t)
+  }, [barsPlay])
+
+  /** 스냅샷 기준 연쇄 종료 시 스냅 해제 + 작업 도트 시작 (타이밍이 진행률 실시간 변경과 무관) */
+  useEffect(() => {
+    if (!mbarSnap || !barsPlay || prefersReducedMotion) return
+    const endMs = getCascadeTotalEndMs(mbarSnap) + GOAL_TASK_DOTS_AFTER_MBARS_MS
+    const id = window.setTimeout(() => {
+      setMbarSnap(null)
+      setTaskDotsPlay(true)
+    }, endMs)
+    return () => window.clearTimeout(id)
+  }, [mbarSnap, barsPlay, prefersReducedMotion])
+
+  /** 감소 동작: 막대 연쇄 없이 도트만 */
   useEffect(() => {
     setTaskDotsPlay(false)
     if (!barsPlay) return
     if (prefersReducedMotion) {
-      setTaskDotsPlay(true)
-      return
+      const id = window.setTimeout(() => setTaskDotsPlay(true), 400)
+      return () => window.clearTimeout(id)
     }
-    const lastMbarDelay = 11 * GOAL_MBAR_STAGGER_MS
-    const mbarEnd = lastMbarDelay + GOAL_MBAR_RISE_CURRENT_MS
-    const id = window.setTimeout(() => setTaskDotsPlay(true), mbarEnd + GOAL_TASK_DOTS_AFTER_MBARS_MS)
-    return () => window.clearTimeout(id)
-  }, [barsPlay, prefersReducedMotion, selectedMonthIndex, cardsForSelectedMonth])
+  }, [barsPlay, prefersReducedMotion])
+
+  /** 연쇄 끝난 뒤 월만 바꿀 때 작업 행 도트 표시 */
+  useEffect(() => {
+    if (!barsPlay || prefersReducedMotion || mbarSnap) return
+    if (startAnim) setTaskDotsPlay(true)
+  }, [selectedMonthIndex, barsPlay, prefersReducedMotion, mbarSnap, startAnim])
 
   const yearView = useMemo(() => {
     if (goalScope !== 'year') {
@@ -477,14 +557,29 @@ export default function GoalScreen({
         <div className="goal-mbar-grid">
           {Array.from({ length: 12 }, (_, i) => {
             const m = i + 1
-            const ym = ymForYearMonth(gridYear, i)
-            const monthCards = trackerCards.filter(
-              (c) => c && typeof c === 'object' && c.activeMonthYm === ym,
-            )
-            const pct = averagePercent(monthCards)
+            const pctLive = monthProgress[i] ?? 0
+            const prog = mbarSnap !== null ? mbarSnap[i] ?? 0 : pctLive
             const selected = selectedMonthIndex === i
-            const mbarAnimOn = barsPlay && !prefersReducedMotion
-            const mbarStaticOn = barsPlay && prefersReducedMotion
+            const barMs = getBarDurationMs(prog)
+            const cascadeDelay = getCascadeStartDelay(i, mbarSnap ?? monthProgress)
+            const showBar = pctLive > 0 || (mbarSnap !== null && prog > 0)
+
+            const fillCascade =
+              mbarSnap !== null &&
+              barsPlay &&
+              !prefersReducedMotion &&
+              startAnim &&
+              barMs > 0
+            const fillStaticRm = barsPlay && prefersReducedMotion && getBarDurationMs(pctLive) > 0 && pctLive > 0
+            const fillStaticDone =
+              mbarSnap === null &&
+              barsPlay &&
+              !prefersReducedMotion &&
+              startAnim &&
+              pctLive > 0 &&
+              getBarDurationMs(pctLive) > 0
+            const fillIdle =
+              showBar && !fillCascade && !fillStaticRm && !fillStaticDone
 
             return (
               <div
@@ -501,25 +596,24 @@ export default function GoalScreen({
                 }}
               >
                 <div className={`goal-mbar-outer${selected ? ' goal-mbar-outer--selected' : ''}`}>
-                  {pct > 0 ? (
+                  {showBar ? (
                     <div
                       className={[
                         'goal-mbar-fill',
-                        !barsPlay ? 'goal-mbar-fill--idle' : '',
-                        mbarAnimOn ? 'goal-mbar-fill--animate' : '',
-                        mbarStaticOn ? 'goal-mbar-fill--shown' : '',
+                        fillStaticRm || fillStaticDone ? 'goal-mbar-fill--cascade-static' : '',
+                        fillCascade ? 'goal-mbar-fill--cascade' : '',
+                        fillIdle ? 'goal-mbar-fill--cascade-idle' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
                       style={{
-                        ['--mbar-fill-pct']: `${pct}%`,
-                        ['--mbar-rise-ms']: `${pct >= 100 ? GOAL_MBAR_RISE_FAST_MS : GOAL_MBAR_RISE_CURRENT_MS}ms`,
-                        ['--mbar-delay-ms']: `${i * GOAL_MBAR_STAGGER_MS}ms`,
-                        opacity: Math.max(0.12, pct / 100),
+                        ['--target-height']: `${fillCascade || fillIdle ? prog : pctLive}%`,
+                        ['--cascade-duration']: `${barMs}ms`,
+                        ['--cascade-delay']: `${cascadeDelay}ms`,
                       }}
                     />
                   ) : null}
-                  {pct > 0 ? <span className="goal-mbar-pct">{pct}%</span> : null}
+                  {pctLive > 0 ? <span className="goal-mbar-pct">{pctLive}%</span> : null}
                 </div>
                 <span className="goal-mbar-lbl">{m}월</span>
               </div>

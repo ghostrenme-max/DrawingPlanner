@@ -907,12 +907,10 @@ function MainTracker({
             {hdrPctDisplay}
             <sup>%</sup>
           </div>
-          {features.workTimer ? (
-            <div className="mt-prog-meta">
-              <span className="mt-date-ymd">{todayYmd}</span>
-              <span className="mt-today">TODAY</span>
-            </div>
-          ) : null}
+          <div className="mt-prog-meta">
+            <span className="mt-date-ymd">{todayYmd}</span>
+            <span className="mt-today">TODAY</span>
+          </div>
         </div>
         <div className="mt-bar">
           <div
@@ -1007,8 +1005,7 @@ function MainTracker({
                   {kind === 'key' && keyGoalText ? (
                     <p className="mt-card-monthly-goal">이달의 목표: {keyGoalText}</p>
                   ) : null}
-                  {features.selfFeedback ? (
-                    <div className="mt-stages">
+                  <div className="mt-stages">
                       {STAGES.map((st) => {
                         const done =
                           Boolean(card.workFinalized) ||
@@ -1097,10 +1094,8 @@ function MainTracker({
                         </button>
                       </div>
                     </div>
-                  ) : null}
 
-                  {features.imageUploadSlot ? (
-                    <div className="mt-slots">
+                  <div className="mt-slots">
                       {[0, 1, 2].map((slotIdx) => {
                         const url = urls[slotIdx]
                         if (url) {
@@ -1128,7 +1123,6 @@ function MainTracker({
                         )
                       })}
                     </div>
-                  ) : null}
 
                   {features.gallery ? (
                     <button
@@ -1137,7 +1131,11 @@ function MainTracker({
                       onClick={() => onGallerySendClick(card)}
                       aria-disabled={urls.length === 0 && !card.workFinalized}
                     >
-                      갤러리로 보내기
+                      {kind === 'key'
+                        ? '갤러리로 보내기'
+                        : urls.length === 0 && !card.workFinalized
+                          ? '갤러리로 보내기'
+                          : '✓ 완성했어요 — 갤러리로 보내기'}
                     </button>
                   ) : null}
                 </div>
