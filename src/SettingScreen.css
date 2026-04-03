@@ -12,33 +12,20 @@
   flex-shrink: 0;
   padding: 20px 18px 14px;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
 }
 
-.setting-header-mark .setting-mark-dot-main,
+.setting-header-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .setting-about-mark-wrap .setting-mark-dot-main {
   fill: var(--ww-main);
 }
 
-.setting-header-mark .setting-mark-dot-sub,
 .setting-about-mark-wrap .setting-mark-dot-sub {
   fill: var(--ww-sub);
-}
-
-.setting-header-mark {
-  display: block;
-  flex-shrink: 0;
-}
-
-.setting-header-title {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.2);
 }
 
 .setting-scroll {

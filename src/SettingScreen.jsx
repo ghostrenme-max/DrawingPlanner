@@ -3,6 +3,7 @@ import { useLang } from './contexts/LanguageContext.js'
 import { APP_THEME_PRESETS } from './appTheme.js'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import { createEmptyGoalTexts } from './goalConfig.js'
+import BrandWordmark from './BrandWordmark.jsx'
 
 /** 설정 GOALS · DAY 탭 (goalTexts 키는 기존 dm_* 와 동일) */
 const GOAL_TAB_DAY_ROWS = [
@@ -117,8 +118,9 @@ export default function SettingScreen({
   return (
     <div className="setting-screen">
       <header className="setting-header">
-        <SettingsMarkSvg size={34} className="setting-header-mark" />
-        <span className="setting-header-title">{t.setting.title}</span>
+        <div className="setting-header-brand">
+          <BrandWordmark />
+        </div>
       </header>
 
       <div className="setting-scroll">

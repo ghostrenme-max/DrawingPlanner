@@ -4,6 +4,7 @@ import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GalleryScreen.css'
+import { hideGalleryBanner, showGalleryBanner } from './hooks/useAdMob.js'
 
 const MAX_GALLERY_PINS = 3
 const PIN_LIMIT_TOAST_VISIBLE_MS = 2600
@@ -351,6 +352,14 @@ export default function GalleryScreen({
   onOpenReferenceFolder,
 }) {
   const { t, lang } = useLang()
+
+  useEffect(() => {
+    void showGalleryBanner()
+    return () => {
+      void hideGalleryBanner()
+    }
+  }, [])
+
   const [lightbox, setLightbox] = useState(
     /** @type {{ src: string; itemId: string; imageIndex: number } | null} */ (null),
   )
