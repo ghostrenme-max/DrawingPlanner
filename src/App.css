@@ -78,7 +78,8 @@
   height: 100%;
   align-self: center;
   background-color: #0a0a0a;
-  border-radius: 48px;
+  /* 뷰포트에 맞춰 모서리 비율 유지(좁은 폰·짧은 높이에서 과한 라운드 방지) */
+  border-radius: min(48px, max(16px, min(12.5vw, 12.5vmin)));
   overflow: hidden;
   position: relative;
   flex-shrink: 0;

@@ -1631,3 +1631,72 @@
   display: block;
   line-height: 1.45;
 }
+
+/* 영어: 라틴이 DM Mono 9px·좁은 자간에서 눌려 보이는 구간 — 한국어와 비슷한 굵기·리듬으로 Plus Jakarta 위주 */
+.gallery-screen--en .gallery-empty-text {
+  font-family: 'Plus Jakarta Sans', 'Syne', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
+.gallery-screen--en .gallery-empty-hint {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  line-height: 1.55;
+}
+
+.gallery-screen--en .gallery-dnd-hint {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  line-height: 1.5;
+}
+
+.gallery-screen--en .gallery-ref-folder-card-title {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+}
+
+.gallery-screen--en .gallery-ref-folder-card-desc {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  line-height: 1.55;
+}
+
+.gallery-screen--en .gallery-month-label,
+.gallery-screen--en .gallery-month-label-btn-text {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.gallery-screen--en .gallery-month-filter-text {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.035em;
+}
+
+.gallery-screen--en .gallery-month-filter-empty {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  line-height: 1.45;
+}
+
+.gallery-screen--en .gallery-pin-limit-toast {
+  font-family: 'Plus Jakarta Sans', 'DM Mono', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}

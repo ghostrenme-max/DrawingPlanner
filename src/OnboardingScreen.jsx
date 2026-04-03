@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLang } from './contexts/LanguageContext.js'
 import {
   buildInitialMonthlyGoals,
   getSuggestedMonthlyLine,
@@ -25,6 +26,8 @@ export default function OnboardingScreen({
   onFinishWithMonthly,
   onFinishGoalOnly,
 }) {
+  const { t, lang } = useLang()
+  const onboardingI18n = lang !== 'ko'
   const [step, setStep] = useState(/** @type {1 | 2} */ (1))
   const [goalText, setGoalText] = useState(initialText)
   const [selectedField, setSelectedField] = useState(/** @type {string | null} */ (null))
@@ -99,38 +102,38 @@ export default function OnboardingScreen({
   return (
     <div className="ob-overlay" role="presentation">
       <div
-        className={`ob-dialog${step === 2 ? ' ob-dialog--step2' : ''}`}
+        className={`ob-dialog${step === 2 ? ' ob-dialog--step2' : ''}${onboardingI18n ? ' ob-dialog--i18n' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ob-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h1 id="ob-title" className="ob-title">
-          올해의 목표
+        <h1 id="ob-title" className="ob-title" style={{ whiteSpace: 'pre-line' }}>
+          {t.onboarding.title}
         </h1>
 
         {step === 1 ? (
           <>
-            <p className="ob-lead">
-              이루고 싶은 목표를
-              <br />
-              1년치만 떼서 적어보세요.
-              <br />
-              목표는 설정 탭에서 수정 가능합니다.
+            <p className="ob-lead" style={{ whiteSpace: 'pre-line' }}>
+              {t.onboarding.subtitle}
             </p>
             <textarea
               ref={areaRef}
               className="ob-textarea"
               value={goalText}
               onChange={(e) => setGoalText(e.target.value)}
-              placeholder="한줄이어도 괜찮아요."
+              placeholder={t.onboarding.placeholder}
               rows={6}
-              aria-label="1년 목표 입력"
+              aria-label={t.onboarding.goalInputAria}
             />
-            <p className="ob-field-label">창작 분야</p>
-            <div className="ob-field-chips" role="group" aria-label="창작 분야 선택">
+            <p className="ob-field-label">{t.onboarding.fieldLabel}</p>
+            <div className="ob-field-chips" role="group" aria-label={t.onboarding.fieldGroupAria}>
               {ONBOARDING_FIELD_OPTIONS.map(({ field, label }) => {
                 const on = selectedField === field
+                const chipLabel =
+                  field == null
+                    ? t.onboarding.fieldLabelOther
+                    : t.onboarding.fieldLabels[field] ?? label
                 return (
                   <button
                     key={label}
@@ -139,38 +142,38 @@ export default function OnboardingScreen({
                     aria-pressed={on}
                     onClick={() => setSelectedField(field)}
                   >
-                    {label}
+                    {chipLabel}
                   </button>
                 )
               })}
             </div>
             <div className="ob-actions">
               <button type="button" className="ob-btn ob-btn--ghost" onClick={() => onDismiss?.()}>
-                나중에
+                {t.onboarding.later}
               </button>
               <button type="button" className="ob-btn ob-btn--primary" onClick={goStep2}>
-                다음
+                {t.onboarding.next}
               </button>
             </div>
           </>
         ) : (
           <>
             <div className="ob-confirm-box">
-              <p className="ob-confirm-label">1년 목표</p>
+              <p className="ob-confirm-label">{t.onboarding.yearGoalBox}</p>
               <p className="ob-confirm-text">{goalText.trim() || '—'}</p>
             </div>
             <div className="ob-auto-hint">
               <div className="ob-auto-hint-left">
                 <span className="ob-auto-hint-dot" aria-hidden />
-                <p className="ob-auto-hint-text">12개월로 자동 배분했어요</p>
+                <p className="ob-auto-hint-text">{t.onboarding.autoHintShort}</p>
               </div>
               <button
                 type="button"
                 className="ob-auto-hint-edit"
-                aria-label="월별 목표 수정"
+                aria-label={t.onboarding.editMonthsAria}
                 onClick={openEditModal}
               >
-                수정
+                {t.common.edit}
               </button>
             </div>
             <div className="ob-month-scroll">
@@ -180,7 +183,9 @@ export default function OnboardingScreen({
                 return (
                   <div key={i} className="ob-month-item">
                     <div className="ob-month-item-head">
-                      <span className="ob-month-item-label">{monthNum}월</span>
+                      <span className="ob-month-item-label">
+                        {t.onboarding.monthUnit.replace('{n}', String(monthNum))}
+                      </span>
                       {has ? (
                         <span className="ob-month-item-done" aria-hidden>
                           ✓
@@ -209,7 +214,7 @@ export default function OnboardingScreen({
                             return next
                           })
                         }}
-                        aria-label={`${monthNum}월 목표`}
+                        aria-label={t.onboarding.monthGoalInputAria.replace('{n}', String(monthNum))}
                       />
                     </div>
                   </div>
@@ -217,10 +222,10 @@ export default function OnboardingScreen({
               })}
             </div>
             <button type="button" className="ob-start-btn" onClick={handleStart}>
-              목표 저장하고 시작
+              {t.onboarding.startBtn}
             </button>
             <button type="button" className="ob-skip-detail" onClick={handleSkipDetail}>
-              나중에 채울게요
+              {t.onboarding.skipBtn}
             </button>
 
             {showEditModal ? (
@@ -228,7 +233,7 @@ export default function OnboardingScreen({
                 className="ob-edit-modal"
                 role="dialog"
                 aria-modal="true"
-                aria-label="월별 목표 수정"
+                aria-label={t.onboarding.editModalAria}
               >
                 <header className="ob-edit-modal-header">
                   <button
@@ -236,15 +241,15 @@ export default function OnboardingScreen({
                     className="ob-edit-modal-close"
                     onClick={() => setShowEditModal(false)}
                   >
-                    ← 닫기
+                    {t.onboarding.editModalClose}
                   </button>
                   <button type="button" className="ob-edit-modal-done" onClick={() => setShowEditModal(false)}>
-                    완료
+                    {t.onboarding.editModalDone}
                   </button>
                 </header>
                 <div className="ob-edit-modal-tabs-wrap">
                   <div className="ob-edit-modal-tabs">
-                    <div className="ob-edit-modal-tabs-row" role="tablist" aria-label="월 선택">
+                    <div className="ob-edit-modal-tabs-row" role="tablist" aria-label={t.onboarding.monthTabsAria}>
                       {MONTH_KEYS.map((mm, idx) => {
                         const on = selectedEditMonth === mm
                         return (
@@ -259,17 +264,17 @@ export default function OnboardingScreen({
                             className={`ob-edit-modal-tab${on ? ' ob-edit-modal-tab--on' : ''}`}
                             onClick={() => setSelectedEditMonth(mm)}
                           >
-                            {mm}월
+                            {t.onboarding.monthUnit.replace('{n}', mm)}
                           </button>
                         )
                       })}
                     </div>
                   </div>
-                  <p className="ob-edit-modal-tabs-swipe-hint">옆으로 밀어 7~12월을 선택할 수 있어요</p>
+                  <p className="ob-edit-modal-tabs-swipe-hint">{t.onboarding.swipeMonthsHint}</p>
                 </div>
                 <div className="ob-edit-modal-body">
                   <label className="ob-edit-modal-label" htmlFor="ob-edit-modal-textarea">
-                    {selectedEditMonth}월 목표
+                    {t.onboarding.monthGoalLabel.replace('{n}', selectedEditMonth)}
                   </label>
                   <div className="ob-edit-modal-field-wrap">
                     {editModalGhostMode ? (
@@ -326,7 +331,7 @@ export default function OnboardingScreen({
                       }}
                     />
                   </div>
-                  <p className="ob-edit-modal-hint">탭으로 다음 달로 넘어갈 수 있어요</p>
+                  <p className="ob-edit-modal-hint">{t.onboarding.tabNextMonthHint}</p>
                 </div>
               </div>
             ) : null}

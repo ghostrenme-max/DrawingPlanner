@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import { createEmptyGoalTexts } from './goalConfig.js'
 import { applyThemeToDocument, DEFAULT_THEME_INDEX } from './appTheme.js'
@@ -185,7 +186,22 @@ function Wordmark() {
   )
 }
 
-function SplashTagline() {
+function splitTaglineForSplash(s) {
+  if (!s) return { first: '', second: '', sep: ',' }
+  const iComma = s.indexOf(',')
+  const iFull = s.indexOf('，')
+  const iJp = s.indexOf('、')
+  const i = [iComma, iFull, iJp].filter((x) => x >= 0).sort((a, b) => a - b)[0] ?? -1
+  if (i < 0) return { first: s.trim(), second: '', sep: '' }
+  return {
+    first: s.slice(0, i).trim(),
+    second: s.slice(i + 1).trim(),
+    sep: s[i],
+  }
+}
+
+function SplashTagline({ tagline }) {
+  const { first, second, sep } = splitTaglineForSplash(tagline)
   return (
     <p
       className="splash-tagline"
@@ -197,14 +213,16 @@ function SplashTagline() {
     >
       <span className="splash-sync-i splash-color-main">
         <span className="splash-tagline-gati">
-          <span className="splash-tagline-gati-tighten">같이</span>
-          {','}
+          <span className="splash-tagline-gati-tighten">{first}</span>
+          {sep ? sep : null}
         </span>
       </span>
-      <span className="splash-sync-o splash-color-sub">
-        <span className="splash-tagline-worth-lead"> </span>
-        <span className="splash-tagline-worth-spread">가치있게</span>
-      </span>
+      {second ? (
+        <span className="splash-sync-o splash-color-sub">
+          <span className="splash-tagline-worth-lead"> </span>
+          <span className="splash-tagline-worth-spread">{second}</span>
+        </span>
+      ) : null}
     </p>
   )
 }
@@ -268,6 +286,7 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 }
 
 function App() {
+  const { t } = useLang()
   const [screen, setScreen] = useState(
     /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference'} */ ('splash'),
   )
@@ -281,6 +300,19 @@ function App() {
   const [referenceImages, setReferenceImages] = useState(
     /** @type {Array<{ id: string; url: string; tag: string; memo: string; savedAt: string }>} */ ([]),
   )
+
+  const [goalTexts, setGoalTexts] = useState(() => createEmptyGoalTexts())
+  const [monthlyGoals, setMonthlyGoals] = useState(() => loadMonthlyGoalsFromStorage())
+  const [trackerCards, setTrackerCards] = useState(() => loadTrackerCardsFromStorage())
+  const [feedbackCards, setFeedbackCards] = useState(() => loadFeedbackCardsFromStorage())
+  const [goalStartDate, setGoalStartDate] = useState('')
+  const [goal1yMainStrip, setGoal1yMainStrip] = useState(
+    /** @type {'tip' | 'sample' | 'hidden'} */ ('tip'),
+  )
+  const [goalWelcomeVisible, setGoalWelcomeVisible] = useState(() =>
+    GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD ? true : readGoalWelcomeShouldShow(),
+  )
+  const hadGoal1yTextRef = useRef(!!(goalTexts['1y'] ?? '').trim())
 
   const toggleGalleryPin = useCallback((pinKey) => {
     setGalleryPinnedKeys((prev) => {
@@ -350,19 +382,6 @@ function App() {
     })
     setGalleryPinnedKeys([])
   }, [])
-
-  const [goalTexts, setGoalTexts] = useState(() => createEmptyGoalTexts())
-  const [monthlyGoals, setMonthlyGoals] = useState(() => loadMonthlyGoalsFromStorage())
-  const [trackerCards, setTrackerCards] = useState(() => loadTrackerCardsFromStorage())
-  const [feedbackCards, setFeedbackCards] = useState(() => loadFeedbackCardsFromStorage())
-  const [goalStartDate, setGoalStartDate] = useState('')
-  const [goal1yMainStrip, setGoal1yMainStrip] = useState(
-    /** @type {'tip' | 'sample' | 'hidden'} */ ('tip'),
-  )
-  const [goalWelcomeVisible, setGoalWelcomeVisible] = useState(() =>
-    GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD ? true : readGoalWelcomeShouldShow(),
-  )
-  const hadGoal1yTextRef = useRef(!!(goalTexts['1y'] ?? '').trim())
 
   useEffect(() => {
     clearLegacyGoalStripKeys()
@@ -451,7 +470,7 @@ function App() {
     setThemeIndex(DEFAULT_THEME_INDEX)
     setGoalTexts(createEmptyGoalTexts())
     setMonthlyGoals(Array.from({ length: 12 }, () => ''))
-    setTrackerCards(createDefaultTrackerCards())
+    setTrackerCards(createDefaultTrackerCards(t))
     setFeedbackCards([])
     setGoalStartDate('')
     try {
@@ -475,7 +494,7 @@ function App() {
     setGoal1yMainStrip('tip')
     hadGoal1yTextRef.current = false
     setGalleryPinnedKeys([])
-  }, [])
+  }, [t])
 
   /** 갤러리 테스트용: 이미지 한 장 삭제(blob URL 정리 포함) */
   const onRemoveGalleryImage = useCallback((itemId, imageIndex) => {
@@ -575,7 +594,7 @@ function App() {
               <Wordmark />
             </div>
 
-            <SplashTagline />
+            <SplashTagline tagline={t.tagline} />
           </div>
         </div>
       ) : (

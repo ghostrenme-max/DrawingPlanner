@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
@@ -349,6 +350,7 @@ export default function GalleryScreen({
   onAppendFeedbackCard,
   onOpenReferenceFolder,
 }) {
+  const { t, lang } = useLang()
   const [lightbox, setLightbox] = useState(
     /** @type {{ src: string; itemId: string; imageIndex: number } | null} */ (null),
   )
@@ -548,7 +550,7 @@ export default function GalleryScreen({
     const month = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`
     const workTitleRaw = detailLiveItem.workTitle
     const workTitle =
-      typeof workTitleRaw === 'string' && workTitleRaw.trim() ? workTitleRaw.trim() : '갤러리 작업'
+      typeof workTitleRaw === 'string' && workTitleRaw.trim() ? workTitleRaw.trim() : t.gallery.feedbackWorkFallback
     const type = resolveGalleryFeedbackType(trackerCards, detailLiveItem.sourceCardId)
     onAppendFeedbackCard({
       id: Date.now(),
@@ -562,7 +564,7 @@ export default function GalleryScreen({
     })
     setDetailFeedbackDraft('')
     setFeedbackSavedToast(true)
-  }, [detailFeedbackDraft, detailLiveItem, onAppendFeedbackCard, trackerCards])
+  }, [detailFeedbackDraft, detailLiveItem, onAppendFeedbackCard, trackerCards, t.gallery.feedbackWorkFallback])
 
   const endDrag = useCallback(() => {
     setDraggingId(null)
@@ -678,13 +680,13 @@ export default function GalleryScreen({
   const isEmpty = items.length === 0
 
   return (
-    <div className="gallery-screen">
+    <div className={`gallery-screen${lang === 'en' ? ' gallery-screen--en' : ''}`}>
       {showDetailView && detailLiveItem ? (
         <div
           className="gallery-group-detail"
           role="dialog"
           aria-modal="true"
-          aria-label={detailIsGrouped ? '과정샷 상세' : '작업 상세'}
+          aria-label={detailIsGrouped ? t.gallery.detailGroupedAria : t.gallery.detailSingleAria}
         >
           {detailIsGrouped ? (
             <input
@@ -701,12 +703,12 @@ export default function GalleryScreen({
           ) : null}
           <header className="gallery-group-detail-header">
             <button type="button" className="gallery-group-detail-back" onClick={closeGroupDetail}>
-              ← 뒤로
+              {t.common.back}
             </button>
             {detailIsGrouped ? (
               detailEditOrder ? (
                 <button type="button" className="gallery-group-detail-action" onClick={finishDetailEditOrder}>
-                  완료
+                  {t.common.done}
                 </button>
               ) : (
                 <button
@@ -714,7 +716,7 @@ export default function GalleryScreen({
                   className="gallery-group-detail-action"
                   onClick={() => setDetailEditOrder(true)}
                 >
-                  편집
+                  {t.common.edit}
                 </button>
               )
             ) : null}
@@ -723,12 +725,14 @@ export default function GalleryScreen({
             <>
               <div className="gallery-group-detail-final-block">
                 <div className="gallery-group-detail-final-label-row">
-                  <p className="gallery-group-detail-section-label gallery-group-detail-section-label--final">완성본</p>
+                  <p className="gallery-group-detail-section-label gallery-group-detail-section-label--final">
+                    {t.gallery.final}
+                  </p>
                   {detailLiveItem.finalImageIndex >= 0 &&
                   detailLiveItem.images[detailLiveItem.finalImageIndex] &&
                   !detailEditOrder ? (
                     <button type="button" className="gallery-group-detail-demote-btn" onClick={handleDemoteFinal}>
-                      완성본 내리기
+                      {t.gallery.finalDemote}
                     </button>
                   ) : null}
                 </div>
@@ -789,9 +793,7 @@ export default function GalleryScreen({
                       <span className="gallery-group-detail-final-dropzone-icon" aria-hidden>
                         +
                       </span>
-                      <span className="gallery-group-detail-final-dropzone-text">
-                        과정에서 끌어다 놓으면 완성본이 됩니다
-                      </span>
+                      <span className="gallery-group-detail-final-dropzone-text">{t.gallery.finalDropHint}</span>
                     </div>
                   )
                 })()}
@@ -801,7 +803,9 @@ export default function GalleryScreen({
           ) : (
             <>
               <div className="gallery-group-detail-final-block">
-                <p className="gallery-group-detail-section-label gallery-group-detail-section-label--final">작업</p>
+                <p className="gallery-group-detail-section-label gallery-group-detail-section-label--final">
+                  {t.gallery.workLabel}
+                </p>
                 {(() => {
                   const sIdx =
                     detailLiveItem.finalImageIndex >= 0 &&
@@ -830,7 +834,9 @@ export default function GalleryScreen({
           <div className="gallery-group-detail-scroll">
             {detailIsGrouped ? (
               <>
-                <p className="gallery-group-detail-section-label gallery-group-detail-section-label--process">과정</p>
+                <p className="gallery-group-detail-section-label gallery-group-detail-section-label--process">
+                  {t.gallery.process}
+                </p>
                 {detailProcessImages.map((img, idx) => (
                   <div
                     key={`${img.url}-${idx}`}
@@ -919,7 +925,7 @@ export default function GalleryScreen({
                   className="gallery-group-detail-add"
                   onClick={() => detailFileInputRef.current?.click()}
                 >
-                  + 과정샷 추가
+                  {t.gallery.addProcessShot}
                 </button>
               </>
             ) : null}
@@ -927,10 +933,10 @@ export default function GalleryScreen({
             {onAppendFeedbackCard ? (
               <>
                 <div className="gallery-detail-feedback-rule" aria-hidden />
-                <section className="gallery-detail-feedback" aria-label="작업 피드백">
+                <section className="gallery-detail-feedback" aria-label={t.gallery.detailFeedbackSectionAria}>
                   <div className="gallery-detail-feedback-box">
                     <div className="gallery-detail-feedback-head">
-                      <span className="gallery-detail-feedback-label">💬 이번 작업 피드백</span>
+                      <span className="gallery-detail-feedback-label">{t.feedback.label}</span>
                       <span
                         className={`gallery-detail-feedback-count${
                           detailFeedbackDraft.length > 20 ? ' gallery-detail-feedback-count--warn' : ''
@@ -945,17 +951,17 @@ export default function GalleryScreen({
                       onChange={(e) => setDetailFeedbackDraft(e.target.value)}
                       maxLength={20}
                       rows={2}
-                      placeholder="한 줄로 남기는 이번 작업 기록"
-                      aria-label="피드백 입력"
+                      placeholder={t.feedback.placeholder}
+                      aria-label={t.common.feedbackInputAria}
                     />
-                    <p className="gallery-detail-feedback-hint">20자 이내 · 트래커 카드로 저장돼요</p>
+                    <p className="gallery-detail-feedback-hint">{t.feedback.hint}</p>
                     <button
                       type="button"
                       className="gallery-detail-feedback-save"
                       disabled={!detailFeedbackDraft.trim()}
                       onClick={handleSaveDetailFeedback}
                     >
-                      💬 피드백 카드로 저장
+                      {t.feedback.saveBtn}
                     </button>
                   </div>
                 </section>
@@ -964,20 +970,20 @@ export default function GalleryScreen({
           </div>
           {feedbackSavedToast ? (
             <div className="gallery-detail-feedback-toast" role="status">
-              저장됐어요 ✓
+              {t.gallery.feedbackSavedToast}
             </div>
           ) : null}
         </div>
       ) : null}
 
       {lightbox ? (
-        <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label="이미지 전체 보기">
+        <div className="gallery-lightbox" role="dialog" aria-modal="true" aria-label={t.common.imageViewerAria}>
           <div className="gallery-lightbox-toolbar">
             <button
               type="button"
               className={`gallery-lightbox-pin${lightboxPinned ? ' gallery-lightbox-pin--on' : ''}`}
               aria-pressed={lightboxPinned}
-              aria-label={lightboxPinned ? '고정 해제' : '이미지 고정'}
+              aria-label={lightboxPinned ? t.common.unpinImage : t.common.pinImage}
               onClick={handleLightboxPinClick}
             >
               <PinIcon />
@@ -987,13 +993,18 @@ export default function GalleryScreen({
                 <button
                   type="button"
                   className="gallery-lightbox-delete"
-                  aria-label="이미지 삭제"
+                  aria-label={t.common.deleteImage}
                   onClick={handleLightboxDelete}
                 >
                   <TrashIcon />
                 </button>
               ) : null}
-              <button type="button" className="gallery-lightbox-close" onClick={closeLightbox} aria-label="닫기">
+              <button
+                type="button"
+                className="gallery-lightbox-close"
+                onClick={closeLightbox}
+                aria-label={t.common.close}
+              >
                 ✕
               </button>
             </div>
@@ -1009,9 +1020,10 @@ export default function GalleryScreen({
           <BrandWordmark />
           {!isEmpty ? (
             <p className="gallery-dnd-hint">
-              카드를 다른 카드 위로 끌어다 놓으면
+              {t.gallery.dndHintLine1}
               <br />
-              <strong className="gallery-dnd-hint-strong">과정</strong>으로 묶을 수 있어요
+              <strong className="gallery-dnd-hint-strong">{t.gallery.process}</strong>
+              {t.gallery.dndHintLine2}
             </p>
           ) : null}
         </div>
@@ -1023,8 +1035,8 @@ export default function GalleryScreen({
             <div className="gallery-empty">
               <GalleryLogoMark />
               <div className="gallery-empty-lines">
-                <p className="gallery-empty-text">아직 완성작이 없어요</p>
-                <p className="gallery-empty-hint">트래커에서 완성 후 갤러리로 보내기</p>
+                <p className="gallery-empty-text">{t.gallery.noItems}</p>
+                <p className="gallery-empty-hint">{t.gallery.noItemsSub}</p>
               </div>
               <button
                 type="button"
@@ -1035,10 +1047,8 @@ export default function GalleryScreen({
                   <ReferenceFolderIcon className="gallery-ref-folder-card-icon" />
                 </span>
                 <span className="gallery-ref-folder-card-text">
-                  <span className="gallery-ref-folder-card-title">레퍼런스</span>
-                  <span className="gallery-ref-folder-card-desc">
-                    참고 이미지·자료를 모아두는 공간 — 탭해서 들어가기
-                  </span>
+                  <span className="gallery-ref-folder-card-title">{t.gallery.reference}</span>
+                  <span className="gallery-ref-folder-card-desc">{t.gallery.refCardDescEmpty}</span>
                 </span>
                 <span className="gallery-ref-folder-card-arrow" aria-hidden />
               </button>
@@ -1064,7 +1074,7 @@ export default function GalleryScreen({
                         className="gallery-month-label-btn"
                         aria-expanded={showMonthPicker}
                         aria-haspopup="listbox"
-                        aria-label="월 선택"
+                        aria-label={t.common.monthPickAria}
                         onClick={() => setShowMonthPicker((v) => !v)}
                       >
                         <span className="gallery-month-label-btn-text">
@@ -1086,9 +1096,9 @@ export default function GalleryScreen({
                         aria-label={`${formatSectionMonthLabel(selectedMonthKey)} 보기`}
                       >
                         {[
-                          { id: 'all', label: '전체' },
-                          { id: 'general', label: '일반' },
-                          { id: 'process', label: '과정' },
+                          { id: 'all', label: t.gallery.tags.all },
+                          { id: 'general', label: t.gallery.filterGeneral },
+                          { id: 'process', label: t.gallery.process },
                         ].map(({ id, label }) => (
                           <button
                             key={id}
@@ -1107,7 +1117,7 @@ export default function GalleryScreen({
                       </div>
                     </div>
                     {showMonthPicker ? (
-                      <div className="gallery-month-picker-popup" role="listbox" aria-label="월 선택">
+                      <div className="gallery-month-picker-popup" role="listbox" aria-label={t.common.monthPickAria}>
                         {pickerMonthKeys.map((key) => {
                           const selected = key === selectedMonthKey
                           return (
@@ -1147,10 +1157,8 @@ export default function GalleryScreen({
                       <ReferenceFolderIcon className="gallery-ref-folder-card-icon" />
                     </span>
                     <span className="gallery-ref-folder-card-text">
-                      <span className="gallery-ref-folder-card-title">레퍼런스</span>
-                      <span className="gallery-ref-folder-card-desc">
-                        작업물 말고, 참고할 자료만 따로 모아두는 곳
-                      </span>
+                      <span className="gallery-ref-folder-card-title">{t.gallery.reference}</span>
+                      <span className="gallery-ref-folder-card-desc">{t.gallery.refCardDescMain}</span>
                     </span>
                     <span className="gallery-ref-folder-card-arrow" aria-hidden />
                   </button>
@@ -1158,7 +1166,7 @@ export default function GalleryScreen({
                 <div className="gallery-card-list">
                   {visibleItemsForSelectedMonth.length === 0 ? (
                     <p className="gallery-month-filter-empty" role="status">
-                      이 구간에 표시할 항목이 없어요.
+                      {t.gallery.filterEmpty}
                     </p>
                   ) : null}
                   {visibleItemsForSelectedMonth.map((item) => (
@@ -1179,6 +1187,7 @@ export default function GalleryScreen({
                           item={item}
                           pinnedKeySet={pinnedKeySet}
                           onOpenGalleryDetail={openGalleryDetail}
+                          t={t}
                         />
                       ) : (
                         <SingleGalleryCard
@@ -1186,6 +1195,7 @@ export default function GalleryScreen({
                           pinnedKeySet={pinnedKeySet}
                           onOpenGalleryDetail={openGalleryDetail}
                           onRemoveGalleryImage={onRemoveGalleryImage}
+                          t={t}
                         />
                       )}
                     </DraggableGalleryRow>
@@ -1198,32 +1208,32 @@ export default function GalleryScreen({
 
       </div>
 
-      <nav className="gallery-nav" aria-label="하단 메뉴">
+      <nav className="gallery-nav" aria-label={t.common.bottomNavAria}>
         <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('tracker')}>
           <span className="gallery-nav-icon" aria-hidden>
             <NavIconTracker />
           </span>
-          트래커
+          {t.nav.tracker}
         </button>
         {features.goalScreen ? (
           <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('goal')}>
             <span className="gallery-nav-icon" aria-hidden>
               <NavIconGoal />
             </span>
-            목표
+            {t.nav.goal}
           </button>
         ) : null}
         <button type="button" className="gallery-nav-item gallery-nav-item--active">
           <span className="gallery-nav-icon" aria-hidden>
             <NavIconGallery />
           </span>
-          갤러리
+          {t.nav.gallery}
         </button>
         <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('settings')}>
           <span className="gallery-nav-icon" aria-hidden>
             <NavIconSettings />
           </span>
-          설정
+          {t.nav.setting}
         </button>
       </nav>
 
@@ -1234,8 +1244,10 @@ export default function GalleryScreen({
           aria-live="polite"
         >
           <div className="gallery-pin-limit-toast-lines">
-            <span className="gallery-pin-limit-toast-line">상단바 고정 팝업</span>
-            <span className="gallery-pin-limit-toast-line">{MAX_GALLERY_PINS}개까지 가능해요</span>
+            <span className="gallery-pin-limit-toast-line">{t.gallery.pinToastLine1}</span>
+            <span className="gallery-pin-limit-toast-line">
+              {t.gallery.pinToastLine2.replace('{n}', String(MAX_GALLERY_PINS))}
+            </span>
           </div>
         </div>
       ) : null}
@@ -1309,6 +1321,7 @@ function DraggableGalleryRow({
  *   showFinalBadge?: boolean
  *   shellClassName?: string
  *   pinnedKeySet?: Set<string>
+ *   t: import('./locales/ko.js').ko
  * }} props
  */
 function FinalProcessBlock({
@@ -1318,6 +1331,7 @@ function FinalProcessBlock({
   shellClassName = 'gallery-card-grouped',
   pinnedKeySet = new Set(),
   presentationOnly = false,
+  t,
 }) {
   const fi = item.finalImageIndex
   const hasFinal = fi >= 0 && fi < item.images.length && item.images[fi]
@@ -1335,17 +1349,17 @@ function FinalProcessBlock({
     <>
       <img src={final.url} alt="" className="gallery-card-grouped-final-img" draggable={false} />
       {finalPinned ? <GalleryPinCornerBadge /> : null}
-      {showFinalBadge ? <span className="gallery-badge-final">완성본</span> : null}
+      {showFinalBadge ? <span className="gallery-badge-final">{t.gallery.badgeFinal}</span> : null}
       <span className="gallery-card-stamp-bl">{stampFromDate(final)}</span>
     </>
   ) : (
     <>
       <div className="gallery-card-grouped-final-placeholder" aria-hidden>
         <span className="gallery-card-grouped-final-placeholder-icon">+</span>
-        <span className="gallery-card-grouped-final-placeholder-text">완성본을 올려주세요</span>
+        <span className="gallery-card-grouped-final-placeholder-text">{t.gallery.placeholderFinal}</span>
       </div>
       {showFinalBadge ? (
-        <span className="gallery-badge-final gallery-badge-final--muted">완성 대기</span>
+        <span className="gallery-badge-final gallery-badge-final--muted">{t.gallery.badgeAwaiting}</span>
       ) : null}
     </>
   )
@@ -1365,7 +1379,7 @@ function FinalProcessBlock({
           type="button"
           className={finalShellClass}
           onClick={() => onOpenImage(final.url, fi)}
-          aria-label={showFinalBadge ? '완성본 크게 보기' : '대표 이미지 크게 보기'}
+          aria-label={showFinalBadge ? t.gallery.openFinalAria : t.gallery.openHeroAria}
         >
           {finalInner}
         </button>
@@ -1376,10 +1390,10 @@ function FinalProcessBlock({
       )}
       {processIdxs.length > 0 ? (
         <div className="gallery-process-bar">
-          <span className="gallery-process-label">과정</span>
+          <span className="gallery-process-label">{t.gallery.processStripLabel}</span>
           <div className="gallery-process-thumbs">
             {extra > 0 ? (
-              <span className="gallery-process-more" aria-label={`외 ${extra}장`}>
+              <span className="gallery-process-more" aria-label={t.gallery.moreImagesAria.replace('{n}', String(extra))}>
                 +{extra}
               </span>
             ) : null}
@@ -1400,7 +1414,7 @@ function FinalProcessBlock({
                   type="button"
                   className={`gallery-process-thumb${thumbPinned ? ' gallery-process-thumb--pinned' : ''}`}
                   onClick={() => onOpenImage(item.images[idx].url, idx)}
-                  aria-label="과정 샷 보기"
+                  aria-label={t.gallery.openProcessAria}
                 >
                   {thumbPinned ? <GalleryPinCornerBadge small /> : null}
                   <img src={item.images[idx].url} alt="" draggable={false} />
@@ -1420,9 +1434,10 @@ function FinalProcessBlock({
  *   pinnedKeySet?: Set<string>
  *   onOpenGalleryDetail: (item: NonNullable<ReturnType<typeof normalizeGalleryItem>>) => void
  *   onRemoveGalleryImage?: (itemId: string, imageIndex: number) => void
+ *   t: import('./locales/ko.js').ko
  * }} props
  */
-function SingleGalleryCard({ item, onOpenGalleryDetail, onRemoveGalleryImage, pinnedKeySet = new Set() }) {
+function SingleGalleryCard({ item, onOpenGalleryDetail, onRemoveGalleryImage, pinnedKeySet = new Set(), t }) {
   const heroIdx = item.images[item.finalImageIndex] != null ? item.finalImageIndex : 0
   const hero = item.images[heroIdx]
   const heroPinned = pinnedKeySet.has(galleryImagePinKey(item.id, heroIdx))
@@ -1443,7 +1458,7 @@ function SingleGalleryCard({ item, onOpenGalleryDetail, onRemoveGalleryImage, pi
         <button
           type="button"
           className="gallery-card-remove-test"
-          aria-label="이미지 삭제(테스트)"
+          aria-label={t.common.deleteImageTestAria}
           onClick={(e) => {
             e.stopPropagation()
             onRemoveGalleryImage(item.id, heroIdx)
@@ -1461,9 +1476,10 @@ function SingleGalleryCard({ item, onOpenGalleryDetail, onRemoveGalleryImage, pi
  *   item: NonNullable<ReturnType<typeof normalizeGalleryItem>>
  *   pinnedKeySet?: Set<string>
  *   onOpenGalleryDetail: (item: NonNullable<ReturnType<typeof normalizeGalleryItem>>) => void
+ *   t: import('./locales/ko.js').ko
  * }} props
  */
-function GroupedCard({ item, pinnedKeySet, onOpenGalleryDetail }) {
+function GroupedCard({ item, pinnedKeySet, onOpenGalleryDetail, t }) {
   return (
     <div
       className="gallery-card-grouped gallery-card-grouped--detail-entry"
@@ -1484,6 +1500,7 @@ function GroupedCard({ item, pinnedKeySet, onOpenGalleryDetail }) {
         showFinalBadge
         presentationOnly
         shellClassName="gallery-card-grouped-inner"
+        t={t}
       />
     </div>
   )

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useLang } from './contexts/LanguageContext.js'
 import { APP_THEME_PRESETS } from './appTheme.js'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import { createEmptyGoalTexts } from './goalConfig.js'
@@ -46,11 +47,6 @@ function SettingsMarkSvg({ size, className = '' }) {
   )
 }
 
-const FEATURE_ROWS = [
-  { key: 'gallery', label: '갤러리' },
-  { key: 'goalScreen', label: '목표 화면' },
-]
-
 /**
  * @param {{
  *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
@@ -83,6 +79,7 @@ export default function SettingScreen({
   monthlyGoals,
   onMonthlyGoalsChange,
 }) {
+  const { t, lang, setLang } = useLang()
   const [nickname, setNickname] = useState('')
   const [creativeField, setCreativeField] = useState('')
   const [goalOpenId, setGoalOpenId] = useState(/** @type {string | null} */ (null))
@@ -95,8 +92,13 @@ export default function SettingScreen({
     [onFeaturesChange],
   )
 
+  const featureRows = [
+    { key: 'gallery', label: t.setting.featureGallery },
+    { key: 'goalScreen', label: t.setting.featureGoalScreen },
+  ]
+
   const handleResetAll = () => {
-    if (!window.confirm('앱 데이터를 모두 초기화할까요? 이 작업은 되돌릴 수 없어요.')) return
+    if (!window.confirm(t.setting.confirmResetAll)) return
     setNickname('')
     setCreativeField('')
     onGoalTextsChange(createEmptyGoalTexts())
@@ -108,7 +110,7 @@ export default function SettingScreen({
   }
 
   const handleClearGallery = () => {
-    if (!window.confirm('갤러리 이미지를 모두 삭제할까요?')) return
+    if (!window.confirm(t.setting.confirmClearGallery)) return
     onClearGallery()
   }
 
@@ -116,19 +118,19 @@ export default function SettingScreen({
     <div className="setting-screen">
       <header className="setting-header">
         <SettingsMarkSvg size={34} className="setting-header-mark" />
-        <span className="setting-header-title">설정</span>
+        <span className="setting-header-title">{t.setting.title}</span>
       </header>
 
       <div className="setting-scroll">
         <section className="setting-section">
-          <h2 className="setting-section-label setting-section-label--profile">PROFILE</h2>
+          <h2 className="setting-section-label setting-section-label--profile">{t.setting.sections.profile}</h2>
           <div className="setting-card">
             <div className="setting-row setting-row--input">
-              <span className="setting-row-label">닉네임</span>
+              <span className="setting-row-label">{t.setting.nickname}</span>
               <input
                 type="text"
                 className="setting-input-underline"
-                placeholder="나의 이름"
+                placeholder={t.setting.nicknamePh}
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 autoComplete="nickname"
@@ -136,11 +138,11 @@ export default function SettingScreen({
             </div>
             <div className="setting-divider" />
             <div className="setting-row setting-row--input">
-              <span className="setting-row-label">창작 분야</span>
+              <span className="setting-row-label">{t.setting.creativeField}</span>
               <input
                 type="text"
                 className="setting-input-underline"
-                placeholder="일러스트, 디자인..."
+                placeholder={t.setting.creativeFieldPh}
                 value={creativeField}
                 onChange={(e) => setCreativeField(e.target.value)}
               />
@@ -149,9 +151,9 @@ export default function SettingScreen({
         </section>
 
         <section className="setting-section">
-          <h2 className="setting-section-label">FEATURES</h2>
+          <h2 className="setting-section-label">{t.setting.sections.features}</h2>
           <div className="setting-card setting-card--flush">
-            {FEATURE_ROWS.map((row, i) => (
+            {featureRows.map((row, i) => (
               <div key={row.key}>
                 {i > 0 ? <div className="setting-divider" /> : null}
                 <div className="setting-row setting-row--toggle">
@@ -172,9 +174,9 @@ export default function SettingScreen({
         </section>
 
         <section className="setting-section">
-          <h2 className="setting-section-label">GOALS</h2>
+          <h2 className="setting-section-label">{t.setting.sections.goals}</h2>
           <div className="setting-card setting-card--goals">
-            <div className="setting-goals-tabs" role="tablist" aria-label="목표 구간">
+            <div className="setting-goals-tabs" role="tablist" aria-label={t.setting.goalsTabAria}>
               <button
                 type="button"
                 role="tab"
@@ -182,7 +184,7 @@ export default function SettingScreen({
                 className={`setting-goals-tab${activeGoalTab === 'day' ? ' setting-goals-tab--active' : ''}`}
                 onClick={() => setActiveGoalTab('day')}
               >
-                DAY
+                {t.setting.goalsTabDay}
               </button>
               <button
                 type="button"
@@ -191,7 +193,7 @@ export default function SettingScreen({
                 className={`setting-goals-tab${activeGoalTab === 'month' ? ' setting-goals-tab--active' : ''}`}
                 onClick={() => setActiveGoalTab('month')}
               >
-                MONTH
+                {t.setting.goalsTabMonth}
               </button>
               <button
                 type="button"
@@ -200,7 +202,7 @@ export default function SettingScreen({
                 className={`setting-goals-tab${activeGoalTab === 'year' ? ' setting-goals-tab--active' : ''}`}
                 onClick={() => setActiveGoalTab('year')}
               >
-                YEAR
+                {t.setting.goalsTabYear}
               </button>
             </div>
 
@@ -216,7 +218,7 @@ export default function SettingScreen({
                         onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
                       >
                         <span className="setting-row-label setting-row-label--goal-en">{row.label}</span>
-                        <span className="setting-row-chevron">수정 ›</span>
+                        <span className="setting-row-chevron">{t.setting.editChevron}</span>
                       </button>
                       {goalOpenId === row.id ? (
                         <textarea
@@ -256,11 +258,15 @@ export default function SettingScreen({
                             setExpandedMonth((o) => (o === monthIndex ? null : monthIndex))
                           }
                         >
-                          <span className="setting-month-label">{padded}월</span>
+                          <span className="setting-month-label">
+                            {t.common.monthSuffix
+                              ? `${padded}${t.common.monthSuffix}`
+                              : `${padded}`}
+                          </span>
                           <span
                             className={`setting-month-preview${hasValue ? '' : ' setting-month-preview--empty'}`}
                           >
-                            {hasValue ? preview : '미입력'}
+                            {hasValue ? preview : t.setting.monthEmpty}
                           </span>
                         </button>
                         {expandedMonth === monthIndex ? (
@@ -298,7 +304,7 @@ export default function SettingScreen({
                         onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
                       >
                         <span className="setting-row-label setting-row-label--goal-en">{row.label}</span>
-                        <span className="setting-row-chevron">수정 ›</span>
+                        <span className="setting-row-chevron">{t.setting.editChevron}</span>
                       </button>
                       {goalOpenId === row.id ? (
                         <textarea
@@ -315,7 +321,7 @@ export default function SettingScreen({
                 ))}
                 <div className="setting-divider" />
                 <div className="setting-row setting-row--input">
-                  <span className="setting-row-label">시작 날짜</span>
+                  <span className="setting-row-label">{t.setting.startDate}</span>
                   <input
                     type="date"
                     className="setting-input-date"
@@ -329,21 +335,23 @@ export default function SettingScreen({
         </section>
 
         <section className="setting-section">
-          <h2 className="setting-section-label">THEME</h2>
+          <h2 className="setting-section-label">{t.setting.sections.theme}</h2>
           <div className="setting-card">
             <div className="setting-theme-grid">
-              {APP_THEME_PRESETS.map((t, idx) => (
+              {APP_THEME_PRESETS.map((preset, idx) => (
                 <button
-                  key={t.id}
+                  key={preset.id}
                   type="button"
                   className={`setting-theme-btn${themeIndex === idx ? ' setting-theme-btn--selected' : ''}`}
                   onClick={() => onThemeIndexChange(idx)}
                 >
                   <span className="setting-theme-dots" aria-hidden>
-                    <span className="setting-theme-dot" style={{ background: t.main }} />
-                    <span className="setting-theme-dot" style={{ background: t.sub }} />
+                    <span className="setting-theme-dot" style={{ background: preset.main }} />
+                    <span className="setting-theme-dot" style={{ background: preset.sub }} />
                   </span>
-                  <span className="setting-theme-label">{t.label}</span>
+                  <span className="setting-theme-label">
+                    {t.setting.themePresets[preset.id] ?? preset.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -351,27 +359,67 @@ export default function SettingScreen({
         </section>
 
         <section className="setting-section">
-          <h2 className="setting-section-label">DATA</h2>
+          <h2 className="setting-section-label">{t.setting.sections.language}</h2>
+          <div className="setting-card">
+            <p
+              style={{
+                fontFamily: "'DM Mono', ui-monospace, monospace",
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.6)',
+                margin: '0 0 12px',
+              }}
+            >
+              {t.setting.language.title}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {(['ko', 'en', 'ja']).map((code) => {
+                const on = lang === code
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setLang(code)}
+                    style={{
+                      fontFamily: "'DM Mono', ui-monospace, monospace",
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                      borderRadius: '20px',
+                      padding: '8px 16px',
+                      border: on ? '1px solid #FB923C' : '1px solid rgba(255,255,255,0.1)',
+                      color: on ? '#FB923C' : 'rgba(255,255,255,0.3)',
+                      background: on ? 'rgba(251,146,60,0.12)' : 'transparent',
+                    }}
+                  >
+                    {t.setting.language[code]}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="setting-section">
+          <h2 className="setting-section-label">{t.setting.sections.data}</h2>
           <div className="setting-card setting-card--flush">
             <button type="button" className="setting-row setting-row--chevron" onClick={handleResetAll}>
-              <span className="setting-row-label setting-row-label--warn">전체 초기화</span>
+              <span className="setting-row-label setting-row-label--warn">{t.setting.data.reset}</span>
               <span className="setting-row-chevron">›</span>
             </button>
             <div className="setting-divider" />
             <button type="button" className="setting-row setting-row--chevron" onClick={handleClearGallery}>
-              <span className="setting-row-label setting-row-label--danger">갤러리 이미지 삭제</span>
+              <span className="setting-row-label setting-row-label--danger">{t.setting.data.deleteGallery}</span>
               <span className="setting-row-chevron">›</span>
             </button>
           </div>
         </section>
 
         <section className="setting-section">
-          <h2 className="setting-section-label">ABOUT</h2>
+          <h2 className="setting-section-label">{t.setting.sections.about}</h2>
           <div className="setting-card setting-card--about">
             <div className="setting-about-mark-wrap">
               <SettingsMarkSvg size={40} />
             </div>
-            <p className="setting-about-wordmark" aria-label="with worth">
+            <p className="setting-about-wordmark" aria-label={t.setting.aboutWordmarkAria}>
               <span>w</span>
               <span className="setting-about-i">i</span>
               <span>th</span>
@@ -382,29 +430,29 @@ export default function SettingScreen({
               <span className="setting-about-o">o</span>
               <span>rth</span>
             </p>
-            <p className="setting-about-tagline">같이, 가치있게</p>
+            <p className="setting-about-tagline">{t.tagline}</p>
             <div className="setting-divider" />
             <div className="setting-row setting-row--version">
-              <span className="setting-version-left">version</span>
+              <span className="setting-version-left">{t.setting.version}</span>
               <span className="setting-version-right">0.1.0</span>
             </div>
           </div>
         </section>
       </div>
 
-      <nav className="setting-nav" aria-label="하단 메뉴">
+      <nav className="setting-nav" aria-label={t.common.bottomNavAria}>
         <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('tracker')}>
           <span className="setting-nav-icon" aria-hidden>
             <NavIconTracker />
           </span>
-          트래커
+          {t.nav.tracker}
         </button>
         {features.goalScreen ? (
           <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('goal')}>
             <span className="setting-nav-icon" aria-hidden>
               <NavIconGoal />
             </span>
-            목표
+            {t.nav.goal}
           </button>
         ) : null}
         {features.gallery ? (
@@ -412,14 +460,14 @@ export default function SettingScreen({
             <span className="setting-nav-icon" aria-hidden>
               <NavIconGallery />
             </span>
-            갤러리
+            {t.nav.gallery}
           </button>
         ) : null}
         <button type="button" className="setting-nav-item setting-nav-item--active">
           <span className="setting-nav-icon" aria-hidden>
             <NavIconSettings />
           </span>
-          설정
+          {t.nav.setting}
         </button>
       </nav>
     </div>

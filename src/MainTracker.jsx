@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
-import {
-  applyGoalDisplayBreaks,
-  GOAL_1Y_TRACKER_SAMPLE_TEXT,
-  splitGoalHeaderParagraphs,
-} from './goalConfig.js'
+import { applyGoalDisplayBreaks, splitGoalHeaderParagraphs } from './goalConfig.js'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import PlusIcon from './PlusIcon'
@@ -91,14 +88,6 @@ function buildTrackerDisplayEntries(cards, monthlyGoals) {
   return entries
 }
 
-const STAGES = [
-  { id: 's1', label: '스케치' },
-  { id: 's2', label: '라인' },
-  { id: 's3', label: '색' },
-]
-
-const STAGE_TOTAL = STAGES.length
-
 /** @param {Record<string, unknown>} card @param {{ id: string; label: string }} stageDef */
 function getStageLabel(card, stageDef) {
   const sl = card.stageLabels
@@ -109,17 +98,17 @@ function getStageLabel(card, stageDef) {
   return stageDef.label
 }
 
-/** @param {string} cardId @param {Record<string, boolean>} stageDone @param {Record<string, unknown>} card */
-function countCheckedStages(cardId, stageDone, card) {
-  if (card.workFinalized) return STAGE_TOTAL
-  return STAGES.filter((st) => stageDone[`${cardId}-${st.id}`]).length
+/** @param {string} cardId @param {Record<string, boolean>} stageDone @param {Record<string, unknown>} card @param {{ id: string }[]} stages */
+function countCheckedStages(cardId, stageDone, card, stages) {
+  if (card.workFinalized) return stages.length
+  return stages.filter((st) => stageDone[`${cardId}-${st.id}`]).length
 }
 
-/** @param {Record<string, unknown>} card @param {Record<string, boolean>} stageDone */
-function cardProgressPercent(card, stageDone) {
+/** @param {Record<string, unknown>} card @param {Record<string, boolean>} stageDone @param {{ id: string }[]} stages */
+function cardProgressPercent(card, stageDone, stages) {
   if (card.workFinalized) return 100
-  const n = STAGES.filter((st) => stageDone[`${card.id}-${st.id}`]).length
-  return Math.round((n / STAGE_TOTAL) * 100)
+  const n = stages.filter((st) => stageDone[`${card.id}-${st.id}`]).length
+  return Math.round((n / stages.length) * 100)
 }
 
 function formatYmd(d) {
@@ -134,8 +123,17 @@ const MT_HEADER_BAR_MS = 980
 /** 스테이지 토글·완성 확정 시 바·숫자 동기 */
 const MT_LIVE_BAR_MS = 400
 
-/** @param {{ displayTag: string; targetPct: number; cardKind: 'normal' | 'key' | 'carry'; replayKey: number; introNonce: number; barSubTone?: boolean }} props */
-function CardHeadProgress({ displayTag, targetPct, cardKind, replayKey, introNonce, barSubTone = false }) {
+/** @param {{ displayTag: string; targetPct: number; cardKind: 'normal' | 'key' | 'carry'; replayKey: number; introNonce: number; barSubTone?: boolean; keyCardLabel: string; carryLabel: string }} props */
+function CardHeadProgress({
+  displayTag,
+  targetPct,
+  cardKind,
+  replayKey,
+  introNonce,
+  barSubTone = false,
+  keyCardLabel,
+  carryLabel,
+}) {
   const tickKey = `${replayKey}-${introNonce}`
   const [barOn, setBarOn] = useState(false)
   const [pctDisplay, setPctDisplay] = useState(0)
@@ -234,13 +232,13 @@ function CardHeadProgress({ displayTag, targetPct, cardKind, replayKey, introNon
         <span className="mt-card-tag-cluster">
           {cardKind === 'key' ? (
             <span className="mt-card-badge mt-card-badge--key" aria-hidden>
-              이달의 핵심
+              {keyCardLabel}
             </span>
           ) : null}
           <span className="mt-card-tag">{displayTag}</span>
           {cardKind === 'carry' ? (
             <span className="mt-card-badge mt-card-badge--carry" aria-hidden>
-              ↩ 이월
+              {carryLabel}
             </span>
           ) : null}
         </span>
@@ -310,11 +308,15 @@ const FB_SWIPE_SLOP = 14
  *   onRemove?: (id: number) => void
  *   onToggleConfirmed?: (id: number) => void
  *   onPreviewImage?: (url: string, feedbackText: string) => void
+ *   feedbackStrings: { titleTpl: string; workFallback: string; swipeAria: string; galleryLinkAria: string; highlightOnAria: string; highlightOffAria: string; deleteAria: string }
  * }} props
  */
-function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage }) {
-  const work = typeof card.workTitle === 'string' && card.workTitle.trim() ? card.workTitle.trim() : '작업'
-  const title = `Self Feedback - ${work}`
+function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage, feedbackStrings }) {
+  const work =
+    typeof card.workTitle === 'string' && card.workTitle.trim()
+      ? card.workTitle.trim()
+      : feedbackStrings.workFallback
+  const title = feedbackStrings.titleTpl.replace('{work}', work)
   const id = typeof card.id === 'number' ? card.id : Number(card.id)
   const previewUrl = typeof card.previewImageUrl === 'string' ? card.previewImageUrl : ''
   const hasPreview = Boolean(previewUrl)
@@ -421,7 +423,7 @@ function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage
     <div
       className={`mt-feedback-card-wrap${confirmed ? ' mt-feedback-card-wrap--swipeable' : ''}`}
       role="status"
-      aria-label={confirmed ? '메인 등록됨. 왼쪽으로 밀면 삭제돼요.' : undefined}
+      aria-label={confirmed ? feedbackStrings.swipeAria : undefined}
     >
       <div
         className={`mt-feedback-card${confirmed ? ' mt-feedback-card--main' : ''} mt-feedback-card--surface`}
@@ -443,7 +445,7 @@ function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage
               type="button"
               className="mt-feedback-card__icon-btn mt-feedback-card__export-btn"
               disabled={!hasPreview}
-              aria-label="연결된 갤러리 이미지 보기"
+              aria-label={feedbackStrings.galleryLinkAria}
               onClick={() => {
                 if (hasPreview) onPreviewImage?.(previewUrl, feedbackText)
               }}
@@ -454,7 +456,7 @@ function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage
               type="button"
               className="mt-feedback-card__icon-btn mt-feedback-card__check-btn"
               aria-pressed={confirmed}
-              aria-label={confirmed ? '강조 해제' : '메인 톤으로 강조'}
+              aria-label={confirmed ? feedbackStrings.highlightOffAria : feedbackStrings.highlightOnAria}
               onClick={() => {
                 if (Number.isFinite(id)) onToggleConfirmed?.(id)
               }}
@@ -464,7 +466,7 @@ function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage
             <button
               type="button"
               className="mt-feedback-card__icon-btn mt-feedback-card__dismiss-btn"
-              aria-label="피드백 삭제"
+              aria-label={feedbackStrings.deleteAria}
               onClick={() => {
                 if (Number.isFinite(id)) onRemove?.(id)
               }}
@@ -497,6 +499,27 @@ function MainTracker({
   onRemoveFeedbackCard,
   onToggleFeedbackCardConfirmed,
 }) {
+  const { t } = useLang()
+  const STAGES = useMemo(
+    () => [
+      { id: 's1', label: t.tracker.stages.sketch },
+      { id: 's2', label: t.tracker.stages.line },
+      { id: 's3', label: t.tracker.stages.color },
+    ],
+    [t],
+  )
+  const feedbackStrings = useMemo(
+    () => ({
+      titleTpl: t.tracker.feedbackCardTitle,
+      workFallback: t.common.workFallback,
+      swipeAria: t.tracker.feedbackSwipeAria,
+      galleryLinkAria: t.tracker.feedbackGalleryLinkAria,
+      highlightOnAria: t.tracker.feedbackHighlightOnAria,
+      highlightOffAria: t.tracker.feedbackHighlightOffAria,
+      deleteAria: t.tracker.feedbackDeleteAria,
+    }),
+    [t],
+  )
   const [expandedId, setExpandedId] = useState(
     () => trackerCards[0]?.id ?? '1',
   )
@@ -529,14 +552,14 @@ function MainTracker({
 
   useEffect(() => {
     for (const card of trackerCards) {
-      const n = countCheckedStages(card.id, stageDone, card)
+      const n = countCheckedStages(card.id, stageDone, card, STAGES)
       const cid = card.id
       const prev = prevStageFillCountRef.current[cid]
       if (prev === undefined) {
         prevStageFillCountRef.current[cid] = n
         continue
       }
-      if (n === STAGE_TOTAL && !card.workFinalized && prev < STAGE_TOTAL) {
+      if (n === STAGES.length && !card.workFinalized && prev < STAGES.length) {
         const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
         if (!reduced) {
           setCompleteBtnGlowOnce((g) => ({ ...g, [cid]: true }))
@@ -544,7 +567,7 @@ function MainTracker({
       }
       prevStageFillCountRef.current[cid] = n
     }
-  }, [trackerCards, stageDone])
+  }, [trackerCards, stageDone, STAGES])
 
   /** monthlyGoals / 카드 변경 시 `isKeyCard` 한 장만 true 로 동기화 */
   useEffect(() => {
@@ -688,8 +711,8 @@ function MainTracker({
         ...prev,
         {
           id: `n-${Math.round(nonce)}`,
-          displayTag: '새 작업',
-          title: '새 작업',
+          displayTag: t.common.newWork,
+          title: t.common.newWork,
           percent: 0,
           accent: sameMonth % 2 === 0 ? 'orange' : 'teal',
           barIntroNonce: nonce,
@@ -754,7 +777,7 @@ function MainTracker({
       nextDone[key] = false
       setStageDone(nextDone)
       const n = STAGES.filter((st) => nextDone[`${cardId}-${st.id}`]).length
-      const pct = Math.round((n / STAGE_TOTAL) * 100)
+      const pct = Math.round((n / STAGES.length) * 100)
       onTrackerCardsChange((cards) =>
         cards.map((c) =>
           c.id === cardId ? { ...c, workFinalized: false, percent: pct } : c,
@@ -766,7 +789,7 @@ function MainTracker({
     const nextDone = { ...prev, [key]: !prev[key] }
     setStageDone(nextDone)
     const n = STAGES.filter((st) => nextDone[`${cardId}-${st.id}`]).length
-    const pct = Math.round((n / STAGE_TOTAL) * 100)
+    const pct = Math.round((n / STAGES.length) * 100)
     onTrackerCardsChange((cards) =>
       cards.map((c) => (c.id === cardId ? { ...c, percent: pct } : c)),
     )
@@ -793,8 +816,8 @@ function MainTracker({
     const card = trackerCards.find((c) => c.id === cardId)
     if (!card?.workFinalized) return
     let n = STAGES.filter((st) => stageDoneRef.current[`${cardId}-${st.id}`]).length
-    if (n === 0 && card.percent >= 100) n = STAGE_TOTAL
-    const pct = Math.round((n / STAGE_TOTAL) * 100)
+    if (n === 0 && card.percent >= 100) n = STAGES.length
+    const pct = Math.round((n / STAGES.length) * 100)
     onTrackerCardsChange((prev) =>
       prev.map((c) =>
         c.id === cardId ? { ...c, workFinalized: false, percent: pct } : c,
@@ -825,7 +848,7 @@ function MainTracker({
         grouped: false,
         finalImageIndex: 0,
         createdAt: base + i,
-        workTitle: typeof workTitle === 'string' ? workTitle : '작업',
+        workTitle: typeof workTitle === 'string' ? workTitle : t.common.workFallback,
         sourceCardId: card.id,
       })
     })
@@ -859,15 +882,15 @@ function MainTracker({
             onClick={(e) => e.stopPropagation()}
           >
             <p id="mt-sent-title" className="mt-sent-title">
-              갤러리에 잘 담아 두었어요
+              {t.tracker.gallerySentTitle}
             </p>
             <p className="mt-sent-sub">
-              소중한 완성작은 언제든 갤러리 탭에서
+              {t.tracker.gallerySentBodyLine1}
               <br />
-              편하게 다시 볼 수 있어요.
+              {t.tracker.gallerySentBodyLine2}
             </p>
             <button type="button" className="mt-sent-ok" onClick={closeGallerySentDialog}>
-              확인
+              {t.common.ok}
             </button>
           </div>
         </div>
@@ -878,7 +901,7 @@ function MainTracker({
           className="mt-feedback-preview-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label="갤러리 이미지 미리보기"
+          aria-label={t.tracker.galleryPreviewAria}
           onClick={() => setFeedbackPreview(null)}
         >
           <div
@@ -891,7 +914,7 @@ function MainTracker({
               className="mt-feedback-preview-close"
               onClick={() => setFeedbackPreview(null)}
             >
-              닫기
+              {t.common.close}
             </button>
             {feedbackPreview.text.trim() ? (
               <p className="mt-feedback-preview-caption">{feedbackPreview.text}</p>
@@ -909,7 +932,7 @@ function MainTracker({
           </div>
           <div className="mt-prog-meta">
             <span className="mt-date-ymd">{todayYmd}</span>
-            <span className="mt-today">TODAY</span>
+            <span className="mt-today">{t.tracker.today}</span>
           </div>
         </div>
         <div className="mt-bar">
@@ -921,18 +944,23 @@ function MainTracker({
       </header>
 
       {showGoal1yTipCard ? (
-        <div className="mt-goal-tracker-strip" role="region" aria-label="1년 목표 입력 안내">
+        <div className="mt-goal-tracker-strip" role="region" aria-label={t.tracker.goalTipRegionAria}>
           <p className="mt-goal-tip-bar-text">
-            아래에 <strong>1년 목표</strong>를 적고 <strong>확정</strong>하면 그대로 유지돼요. 이후에는{' '}
-            <strong>설정</strong> 탭에서만 바꿀 수 있어요.
+            {t.tracker.goalTipBeforeYear}
+            <strong>{t.tracker.goalTipYear}</strong>
+            {t.tracker.goalTipMid1}
+            <strong>{t.tracker.goalTipConfirm}</strong>
+            {t.tracker.goalTipMid2}
+            <strong>{t.tracker.goalTipSettings}</strong>
+            {t.tracker.goalTipAfterSettings}
           </p>
           <textarea
             className="mt-goal-1y-quick-input"
             value={goal1yValue}
             onChange={(e) => onGoal1yChange?.(e.target.value)}
-            placeholder="예: 올해 메인 일러스트·포트폴리오 마무리"
+            placeholder={t.tracker.goal1yQuickPlaceholder}
             rows={2}
-            aria-label="1년 목표 빠른 입력"
+            aria-label={t.tracker.goal1yQuickAria}
           />
           <div className="mt-goal-tip-bar-actions">
             <button
@@ -940,18 +968,18 @@ function MainTracker({
               className="mt-goal-tip-bar-btn mt-goal-tip-bar-btn--primary"
               onClick={() => onConfirmGoal1yTip?.()}
             >
-              확정
+              {t.tracker.goalTipConfirm}
             </button>
             <button type="button" className="mt-goal-tip-bar-btn" onClick={() => onDismissGoal1yTip?.()}>
-              닫기
+              {t.common.close}
             </button>
           </div>
         </div>
       ) : null}
 
       {showGoal1ySampleFixed ? (
-        <div className="mt-goal-sample-stack" role="status" aria-label="1년 목표 예시">
-          {splitGoalHeaderParagraphs(GOAL_1Y_TRACKER_SAMPLE_TEXT).map((para, i) => (
+        <div className="mt-goal-sample-stack" role="status" aria-label={t.tracker.goalSampleAria}>
+          {splitGoalHeaderParagraphs(t.goal.trackerSampleText).map((para, i) => (
             <p key={i} className="mt-goal-sample-stack-p">
               {applyGoalDisplayBreaks(para)}
             </p>
@@ -960,7 +988,7 @@ function MainTracker({
       ) : null}
 
       {showGoal1yPinned ? (
-        <div className="mt-goal-pinned-stack" role="status" aria-label="1년 목표">
+        <div className="mt-goal-pinned-stack" role="status" aria-label={t.tracker.goalPinnedAria}>
           {splitGoalHeaderParagraphs(goal1yValue).map((para, i) => (
             <p key={i} className="mt-goal-pinned-stack-p">
               {applyGoalDisplayBreaks(para)}
@@ -973,8 +1001,8 @@ function MainTracker({
         {displayEntries.flatMap(({ card, kind, keyGoalText }) => {
           const expanded = expandedId === card.id
           const urls = cardImages[card.id] || []
-          const stageFillCount = countCheckedStages(card.id, stageDone, card)
-          const completeBtnReady = stageFillCount === STAGE_TOTAL && !card.workFinalized
+          const stageFillCount = countCheckedStages(card.id, stageDone, card, STAGES)
+          const completeBtnReady = stageFillCount === STAGES.length && !card.workFinalized
           const cardFeedbacks = feedbackCards.filter((f) => feedbackMatchesTrackerCard(card, f))
 
           const article = (
@@ -992,18 +1020,22 @@ function MainTracker({
               >
                 <CardHeadProgress
                   displayTag={card.displayTag}
-                  targetPct={cardProgressPercent(card, stageDone)}
+                  targetPct={cardProgressPercent(card, stageDone, STAGES)}
                   cardKind={kind}
                   replayKey={trackerBarReplayKey}
                   introNonce={card.barIntroNonce ?? 0}
                   barSubTone={kind === 'normal' && Boolean(card.workFinalized)}
+                  keyCardLabel={t.tracker.keyCard}
+                  carryLabel={t.tracker.carryOver}
                 />
               </button>
 
               {expanded && (
                 <div className="mt-card-detail">
                   {kind === 'key' && keyGoalText ? (
-                    <p className="mt-card-monthly-goal">이달의 목표: {keyGoalText}</p>
+                    <p className="mt-card-monthly-goal">
+                      {t.goal.thisMonthGoal}: {keyGoalText}
+                    </p>
                   ) : null}
                   <div className="mt-stages">
                       {STAGES.map((st) => {
@@ -1034,7 +1066,7 @@ function MainTracker({
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') e.currentTarget.blur()
                                 }}
-                                aria-label={`${st.label} 단계 이름`}
+                                aria-label={t.tracker.stageNameAria.replace('{stage}', st.label)}
                               />
                             ) : (
                               <span
@@ -1064,7 +1096,9 @@ function MainTracker({
                         className={`mt-complete-block${completeBtnReady ? ' mt-complete-block--ready' : ''}`}
                       >
                         <span className="mt-complete-counter">
-                          완성 ({stageFillCount}/{STAGE_TOTAL})
+                          {t.tracker.completeWithStages
+                            .replace('{n}', String(stageFillCount))
+                            .replace('{m}', String(STAGES.length))}
                         </span>
                         <button
                           type="button"
@@ -1088,8 +1122,12 @@ function MainTracker({
                           ) : null}
                           <span className="mt-complete-btn-text">
                             {card.workFinalized
-                              ? `✓ 완성 (${stageFillCount}/${STAGE_TOTAL})`
-                              : `완성 (${stageFillCount}/${STAGE_TOTAL})`}
+                              ? t.tracker.completeDoneWithStages
+                                  .replace('{n}', String(stageFillCount))
+                                  .replace('{m}', String(STAGES.length))
+                              : t.tracker.completeWithStages
+                                  .replace('{n}', String(stageFillCount))
+                                  .replace('{m}', String(STAGES.length))}
                           </span>
                         </button>
                       </div>
@@ -1116,7 +1154,7 @@ function MainTracker({
                             type="button"
                             className="mt-slot mt-slot--empty"
                             onClick={() => openFilePicker(card.id)}
-                            aria-label="이미지 추가"
+                            aria-label={t.common.imageAddAria}
                           >
                             <PlusIcon className="mt-slot-plus" />
                           </button>
@@ -1132,10 +1170,10 @@ function MainTracker({
                       aria-disabled={urls.length === 0 && !card.workFinalized}
                     >
                       {kind === 'key'
-                        ? '갤러리로 보내기'
+                        ? t.tracker.sendGallerySimple
                         : urls.length === 0 && !card.workFinalized
-                          ? '갤러리로 보내기'
-                          : '✓ 완성했어요 — 갤러리로 보내기'}
+                          ? t.tracker.sendGallerySimple
+                          : t.tracker.sendGallery}
                     </button>
                   ) : null}
                 </div>
@@ -1152,6 +1190,7 @@ function MainTracker({
                 card={f}
                 onRemove={onRemoveFeedbackCard}
                 onToggleConfirmed={onToggleFeedbackCardConfirmed}
+                feedbackStrings={feedbackStrings}
                 onPreviewImage={(url, text) =>
                   setFeedbackPreview({ src: url, text: typeof text === 'string' ? text : '' })
                 }
@@ -1161,23 +1200,23 @@ function MainTracker({
         })}
 
         <button type="button" className="mt-card-add" onClick={addNewCard}>
-          <span className="mt-card-add-label">+ 새 작업</span>
+          <span className="mt-card-add-label">{t.tracker.addWork}</span>
         </button>
       </main>
 
-      <nav className="mt-nav" aria-label="하단 메뉴">
+      <nav className="mt-nav" aria-label={t.common.bottomNavAria}>
         <button type="button" className="mt-nav-item mt-nav-item--active">
           <span className="mt-nav-icon" aria-hidden>
             <NavIconTracker />
           </span>
-          트래커
+          {t.nav.tracker}
         </button>
         {features.goalScreen ? (
           <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('goal')}>
             <span className="mt-nav-icon" aria-hidden>
               <NavIconGoal />
             </span>
-            목표
+            {t.nav.goal}
           </button>
         ) : null}
         {features.gallery ? (
@@ -1185,14 +1224,14 @@ function MainTracker({
             <span className="mt-nav-icon" aria-hidden>
               <NavIconGallery />
             </span>
-            갤러리
+            {t.nav.gallery}
           </button>
         ) : null}
         <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('settings')}>
           <span className="mt-nav-icon" aria-hidden>
             <NavIconSettings />
           </span>
-          설정
+          {t.nav.setting}
         </button>
       </nav>
 
@@ -1205,9 +1244,9 @@ function MainTracker({
           onClick={dismissGalleryNeedImagesHint}
         >
           <span className="mt-hint-bar-text">
-            먼저 위 슬롯에 완성 이미지를
+            {t.tracker.slotHintLine1}
             <br />
-            업로드한 뒤 다시 눌러 주세요.
+            {t.tracker.slotHintLine2}
           </span>
         </button>
       ) : null}

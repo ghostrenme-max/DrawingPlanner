@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import {
   applyGoalDisplayBreaks,
@@ -181,6 +182,7 @@ export default function GoalScreen({
   onMonthlyGoalsChange,
   trackerCards = [],
 }) {
+  const { t } = useLang()
   const { year: calendarYear } = currentYearMonth()
   const gridYear = calendarYear
 
@@ -352,6 +354,7 @@ export default function GoalScreen({
     () => GOAL_DM_ZOOM.find((z) => z.id === dmZoomId) ?? GOAL_DM_ZOOM[0],
     [dmZoomId],
   )
+  const dmZoomDisplayLabel = t.goal.dmZoom[dmZoomId] ?? dmSpec.label
 
   const isActiveGoalSettled = useMemo(() => {
     const key = goalScope === 'year' ? yearHorizonToGoalKey(activeHorizon) : dmZoomId
@@ -415,7 +418,7 @@ export default function GoalScreen({
         </div>
 
         <div className="goal-period-toolbar">
-          <div className="goal-scope-row" role="tablist" aria-label="목표 범위">
+          <div className="goal-scope-row" role="tablist" aria-label={t.goal.scopeTabAria}>
             <button
               type="button"
               role="tab"
@@ -423,7 +426,7 @@ export default function GoalScreen({
               className={`goal-scope-chip${goalScope === 'dayMonth' ? ' goal-scope-chip--active' : ''}`}
               onClick={() => setGoalScope('dayMonth')}
             >
-              일 · 월
+              {t.goal.scopeDayMonth}
             </button>
             <button
               type="button"
@@ -432,13 +435,13 @@ export default function GoalScreen({
               className={`goal-scope-chip${goalScope === 'year' ? ' goal-scope-chip--active' : ''}`}
               onClick={() => setGoalScope('year')}
             >
-              연도
+              {t.goal.scopeYear}
             </button>
           </div>
 
           {goalScope === 'year' ? (
             <div className="goal-tabs-scroll-wrap">
-              <div className="goal-tabs-scroll" role="tablist" aria-label="목표 기간(스와이프)">
+              <div className="goal-tabs-scroll" role="tablist" aria-label={t.goal.horizonTabAria}>
                 <div className="goal-tabs-track">
                   <button
                     type="button"
@@ -447,7 +450,7 @@ export default function GoalScreen({
                     className={`goal-tab${activeHorizon === '1' ? ' goal-tab--active' : ''}`}
                     onClick={() => setActiveHorizon('1')}
                   >
-                    1년
+                    {t.goal.tabs.one}
                   </button>
                   <button
                     type="button"
@@ -456,7 +459,7 @@ export default function GoalScreen({
                     className={`goal-tab${activeHorizon === '3' ? ' goal-tab--active' : ''}`}
                     onClick={() => setActiveHorizon('3')}
                   >
-                    3년
+                    {t.goal.tabs.three}
                   </button>
                   <button
                     type="button"
@@ -465,7 +468,7 @@ export default function GoalScreen({
                     className={`goal-tab${activeHorizon === '5' ? ' goal-tab--active' : ''}`}
                     onClick={() => setActiveHorizon('5')}
                   >
-                    5년
+                    {t.goal.tabs.five}
                   </button>
                   <button
                     type="button"
@@ -474,14 +477,14 @@ export default function GoalScreen({
                     className={`goal-tab${activeHorizon === '10' ? ' goal-tab--active' : ''}`}
                     onClick={() => setActiveHorizon('10')}
                   >
-                    10년
+                    {t.goal.tabs.ten}
                   </button>
                   <span className="goal-tabs-track-spacer" aria-hidden />
                 </div>
               </div>
             </div>
           ) : (
-            <div className="goal-zoom-row goal-zoom-row--wrap" aria-label="일·월 단위">
+            <div className="goal-zoom-row goal-zoom-row--wrap" aria-label={t.goal.dmZoomAria}>
               <div className="goal-zoom-chips goal-zoom-chips--wrap" role="group">
                 {GOAL_DM_ZOOM.map((z, i) => (
                   <span key={z.id} className="goal-zoom-chip-wrap">
@@ -495,7 +498,7 @@ export default function GoalScreen({
                       className={`goal-zoom-chip${dmZoomId === z.id ? ' goal-zoom-chip--active' : ''}`}
                       onClick={() => setDmZoomId(z.id)}
                     >
-                      {z.label}
+                      {t.goal.dmZoom[z.id] ?? z.label}
                     </button>
                   </span>
                 ))}
@@ -507,8 +510,10 @@ export default function GoalScreen({
         <div className={['goal-block', isYear1HeaderLayout ? 'goal-block--1y-centered' : ''].filter(Boolean).join(' ')}>
           <div className="goal-period">
             {goalScope === 'year'
-              ? `${yearView.periodLabel} · ${activeHorizon}년`
-              : `${dmSpec.label} 단위`}
+              ? t.goal.periodToolbarYear
+                  .replace('{label}', yearView.periodLabel)
+                  .replace('{n}', activeHorizon)
+              : t.goal.periodToolbarDm.replace('{label}', dmZoomDisplayLabel)}
           </div>
           {goalScope === 'year' ? (
             (goalTexts[yearHorizonToGoalKey(activeHorizon)] ?? '').trim() ? (
@@ -524,24 +529,22 @@ export default function GoalScreen({
                 </p>
               )
             ) : activeHorizon === '1' ? (
-              <p className="goal-text goal-text--muted">
-                설정의 GOALS · YEAR에서 이 기간의 목표를 입력해 주세요.
-              </p>
+              <p className="goal-text goal-text--muted">{t.goal.hintYearFromSettings}</p>
             ) : (
-              <p className="goal-text goal-text--muted">목표 미정</p>
+              <p className="goal-text goal-text--muted">{t.goal.unset}</p>
             )
           ) : isActiveGoalSettled ? (
             <p className="goal-text" style={{ whiteSpace: 'pre-wrap' }}>
               {goalTexts[dmZoomId]}
             </p>
           ) : (
-            <p className="goal-text goal-text--muted">목표 미정</p>
+            <p className="goal-text goal-text--muted">{t.goal.unset}</p>
           )}
         </div>
 
         <div>
           <div className="goal-progress-row">
-            <span className="goal-progress-label">진행률</span>
+            <span className="goal-progress-label">{t.goal.progress}</span>
             <span className="goal-progress-pct">{headerPctDisplay}%</span>
           </div>
           <div className="goal-progress-track">
@@ -615,7 +618,9 @@ export default function GoalScreen({
                   ) : null}
                   {pctLive > 0 ? <span className="goal-mbar-pct">{pctLive}%</span> : null}
                 </div>
-                <span className="goal-mbar-lbl">{m}월</span>
+                <span className="goal-mbar-lbl">
+                  {t.common.monthSuffix ? `${m}${t.common.monthSuffix}` : `${m}`}
+                </span>
               </div>
             )
           })}
@@ -625,7 +630,9 @@ export default function GoalScreen({
           <div className="goal-month-panel-head">
             <div className="goal-month-panel-head-label-row">
               <span className="goal-month-panel-head-dot" aria-hidden />
-              <span className="goal-month-panel-head-title">{selectedMonthIndex + 1}월 목표</span>
+              <span className="goal-month-panel-head-title">
+                {t.goal.monthGoalTitle.replace('{n}', String(selectedMonthIndex + 1))}
+              </span>
             </div>
 
             {monthGoalEditing ? (
@@ -639,11 +646,11 @@ export default function GoalScreen({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') e.currentTarget.blur()
                 }}
-                aria-label={`${selectedMonthIndex + 1}월 목표 편집`}
+                aria-label={t.goal.monthGoalEditAria.replace('{n}', String(selectedMonthIndex + 1))}
               />
             ) : showMonthGoalEmpty ? (
               <button type="button" className="goal-month-panel-goal-empty" onClick={beginEditMonthGoal}>
-                목표를 탭해서 추가해요
+                {t.goal.addGoal}
               </button>
             ) : (
               <button type="button" className="goal-month-panel-goal-text" onClick={beginEditMonthGoal}>
@@ -651,13 +658,15 @@ export default function GoalScreen({
               </button>
             )}
 
-            <p className="goal-month-panel-head-hint">탭해서 수정 가능</p>
+            <p className="goal-month-panel-head-hint">{t.goal.tapToEdit}</p>
           </div>
 
           <div className="goal-month-panel-body">
-            <div className="goal-month-panel-body-label">{selectedMonthIndex + 1}월 작업 내역</div>
+            <div className="goal-month-panel-body-label">
+              {t.goal.monthWorkHistory.replace('{n}', String(selectedMonthIndex + 1))}
+            </div>
             {cardsForSelectedMonth.length === 0 ? (
-              <p className="goal-month-panel-empty-tasks">이달 작업이 없어요</p>
+              <p className="goal-month-panel-empty-tasks">{t.goal.noWork}</p>
             ) : (
               cardsForSelectedMonth.map((card, rowIndex) => {
                 const displayName =
@@ -665,7 +674,7 @@ export default function GoalScreen({
                     ? card.displayTag
                     : typeof card.title === 'string'
                       ? card.title
-                      : '작업'
+                      : t.common.workFallback
                 const done = filledWorkDots(card)
                 return (
                   <GoalPanelWorkRow
@@ -684,32 +693,32 @@ export default function GoalScreen({
         </div>
       </div>
 
-      <nav className="goal-nav" aria-label="하단 메뉴">
+      <nav className="goal-nav" aria-label={t.common.bottomNavAria}>
         <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('tracker')}>
           <span className="goal-nav-icon" aria-hidden>
             <NavIconTracker />
           </span>
-          트래커
+          {t.nav.tracker}
         </button>
         <button type="button" className="goal-nav-item goal-nav-item--active">
           <span className="goal-nav-icon" aria-hidden>
             <NavIconGoal />
           </span>
-          목표
+          {t.nav.goal}
         </button>
         {features.gallery ? (
           <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('gallery')}>
             <span className="goal-nav-icon" aria-hidden>
               <NavIconGallery />
             </span>
-            갤러리
+            {t.nav.gallery}
           </button>
         ) : null}
         <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('settings')}>
           <span className="goal-nav-icon" aria-hidden>
             <NavIconSettings />
           </span>
-          설정
+          {t.nav.setting}
         </button>
       </nav>
     </div>
