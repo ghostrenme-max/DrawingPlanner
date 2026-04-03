@@ -483,6 +483,7 @@ function TrackerFeedbackCard({ card, onRemove, onToggleConfirmed, onPreviewImage
 function MainTracker({
   onTabChange,
   onAddGalleryItem,
+  onGallerySendComplete,
   trackerBarReplayKey = 0,
   features = DEFAULT_APP_FEATURES,
   showGoal1yTipCard = false,
@@ -854,6 +855,7 @@ function MainTracker({
     })
     setCardImages((prev) => ({ ...prev, [card.id]: [] }))
     openGallerySentDialog()
+    onGallerySendComplete?.()
   }
 
   const todayYmd = formatYmd(new Date())

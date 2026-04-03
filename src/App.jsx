@@ -20,6 +20,7 @@ import {
   TRACKER_CARRY_YM_LS,
 } from './trackerPersistence.js'
 import './App.css'
+import { useAdMob } from './hooks/useAdMob.js'
 
 /**
  * 트래커 1년 목표 UI: `tip` = 카드+입력+확정·닫기. 확정 시 유지·접기(비면 sample·있으면 hidden).
@@ -290,6 +291,7 @@ function App() {
   const [screen, setScreen] = useState(
     /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference'} */ ('splash'),
   )
+  const { showInterstitialAfterGallerySend } = useAdMob({ adsEnabled: screen !== 'splash' })
   /** 트래커 탭(재)진입마다 증가 → 상단 진행 바·% 애니 재생 */
   const [trackerBarReplayKey, setTrackerBarReplayKey] = useState(0)
   const [galleryItems, setGalleryItems] = useState(
@@ -652,6 +654,7 @@ function App() {
           <MainTracker
             onTabChange={handleAppNav}
             onAddGalleryItem={appFeatures.gallery ? onAddGalleryItem : undefined}
+            onGallerySendComplete={appFeatures.gallery ? showInterstitialAfterGallerySend : undefined}
             trackerBarReplayKey={trackerBarReplayKey}
             features={appFeatures}
             showGoal1yTipCard={showGoal1yTipCard}
