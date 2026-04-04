@@ -55,6 +55,13 @@
   margin-top: 8px;
 }
 
+.goal-zoom-chips--row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+}
+
 .goal-zoom-chips--wrap {
   flex-wrap: wrap;
   row-gap: 6px;
@@ -186,6 +193,11 @@
   background: var(--ww-main);
   color: #0a0a0a;
   border-color: var(--ww-main);
+}
+
+.goal-tab--quarter-highlight:not(.goal-tab--active) {
+  color: rgba(var(--ww-sub-rgb), 0.95);
+  border-color: rgba(var(--ww-sub-rgb), 0.4);
 }
 
 .goal-tab--locked {
@@ -666,6 +678,254 @@
   opacity: 1;
 }
 
+/* —— 일별: 1~30일 막대 —— */
+
+.goal-daily-chart {
+  margin-bottom: 14px;
+}
+
+.goal-dbar-rising-card {
+  border-radius: 14px;
+  padding: 14px 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-sizing: border-box;
+}
+
+.goal-dbar-rising {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1px;
+  height: 104px;
+  margin-bottom: 8px;
+}
+
+.goal-dbar-col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.goal-dbar-track {
+  flex: 1;
+  width: 100%;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px 3px 1px 1px;
+  overflow: hidden;
+}
+
+.goal-dbar-fill {
+  width: 100%;
+  height: 0;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(
+    to top,
+    rgba(var(--ww-main-rgb), 0.92),
+    rgba(var(--ww-sub-rgb), 0.5)
+  );
+  transition: height 0.78s cubic-bezier(0.33, 1.15, 0.64, 1);
+}
+
+.goal-dbar-fill--active {
+  height: var(--dbar-height-pct);
+}
+
+.goal-dbar-axis {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.34);
+  letter-spacing: 0.02em;
+}
+
+.goal-dbar-axis-tick {
+  flex: 0 0 auto;
+  min-width: 0;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-dbar-fill {
+    transition: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .goal-dbar-axis {
+    font-size: 7px;
+  }
+}
+
+.goal-daily-week-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.goal-daily-week-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.goal-daily-week-block--future {
+  opacity: 0.38;
+}
+
+.goal-daily-week-days-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(var(--ww-sub-rgb), 0.75);
+  line-height: 1.35;
+  padding-left: 2px;
+}
+
+.goal-daily-week-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(var(--ww-sub-rgb), 0.38);
+  background: transparent;
+  color: var(--ww-sub);
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.goal-daily-week-chip--active {
+  background: rgba(var(--ww-sub-rgb), 0.12);
+  border-color: rgba(var(--ww-sub-rgb), 0.55);
+  color: rgba(var(--ww-sub-rgb), 1);
+}
+
+.goal-daily-week-chip:disabled {
+  cursor: not-allowed;
+}
+
+.goal-daily-week-chip:active {
+  opacity: 0.9;
+}
+
+/* 일별: 트래커 카드 연동(읽기 전용, 완성만 20% 불투명도) */
+.goal-daily-tracker-panel {
+  margin-top: 18px;
+  border-radius: 14px;
+  padding: 12px 14px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-sizing: border-box;
+}
+
+.goal-daily-tracker-head {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ww-main);
+  margin-bottom: 10px;
+}
+
+.goal-daily-tracker-empty {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.28);
+  line-height: 1.45;
+}
+
+.goal-daily-tracker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.goal-daily-tracker-item {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  user-select: none;
+}
+
+.goal-daily-tracker-item:last-child {
+  border-bottom: none;
+}
+
+.goal-daily-tracker-item-name {
+  font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.goal-daily-tracker-item--finalized .goal-daily-tracker-item-name {
+  position: relative;
+  display: block;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.goal-daily-tracker-item--finalized .goal-daily-tracker-item-name::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  animation: goal-daily-strike-draw 0.48s cubic-bezier(0.33, 0.86, 0.42, 1) forwards;
+  animation-delay: calc(var(--strike-i, 0) * 140ms);
+}
+
+@keyframes goal-daily-strike-draw {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-daily-tracker-item--finalized .goal-daily-tracker-item-name::after {
+    animation: none;
+    width: 100%;
+  }
+}
+
+.goal-daily-tracker-hint {
+  margin: 12px 0 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ww-main);
+  line-height: 1.4;
+  opacity: 0.92;
+}
+
 /* —— 12개월 막대 그리드 + 선택 월 패널 —— */
 
 .goal-mbar-grid {
@@ -781,6 +1041,10 @@
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--ww-main);
+}
+
+.goal-mbar-lbl--quarter-highlight {
+  color: var(--ww-sub);
 }
 
 .goal-month-panel {

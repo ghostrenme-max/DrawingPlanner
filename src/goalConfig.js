@@ -1,14 +1,14 @@
-/** 설정·목표 탭 공통 — 일·월 단기 / 연도 장기 */
+/** 설정·목표 탭 공통 — 일·분기(dm_q*) goalTexts 키 + 연간(1y…) 키 */
 
 export const GOAL_DAY_MONTH_ROWS = [
   { id: 'dm_1d', label: '1일' },
   { id: 'dm_3d', label: '3일' },
   { id: 'dm_7d', label: '7일' },
   { id: 'dm_15d', label: '15일' },
-  { id: 'dm_1m', label: '1개월' },
-  { id: 'dm_3m', label: '3개월' },
-  { id: 'dm_6m', label: '6개월' },
-  { id: 'dm_9m', label: '9개월' },
+  { id: 'dm_q1', label: '1분기' },
+  { id: 'dm_q2', label: '2분기' },
+  { id: 'dm_q3', label: '3분기' },
+  { id: 'dm_q4', label: '4분기' },
 ]
 
 export const GOAL_YEAR_ROWS = [
@@ -26,8 +26,8 @@ export function createEmptyGoalTexts() {
   return o
 }
 
-/** 목표 탭 일·월 칩 + 막대 세그먼트 라벨 */
-export const GOAL_DM_ZOOM = [
+/** 목표 탭 일별 칩 (1·3·7·15일) */
+export const GOAL_DM_ZOOM_DAYS = [
   { id: 'dm_1d', label: '1일', segments: ['1'] },
   { id: 'dm_3d', label: '3일', segments: ['1', '2', '3'] },
   { id: 'dm_7d', label: '7일', segments: ['1', '2', '3', '4', '5', '6', '7'] },
@@ -36,23 +36,10 @@ export const GOAL_DM_ZOOM = [
     label: '15일',
     segments: Array.from({ length: 15 }, (_, i) => String(i + 1)),
   },
-  { id: 'dm_1m', label: '1개월', segments: ['1주차', '2주차', '3주차', '4주차'] },
-  {
-    id: 'dm_3m',
-    label: '3개월',
-    segments: ['1개월 차', '2개월 차', '3개월 차'],
-  },
-  {
-    id: 'dm_6m',
-    label: '6개월',
-    segments: Array.from({ length: 6 }, (_, i) => `${i + 1}개월 차`),
-  },
-  {
-    id: 'dm_9m',
-    label: '9개월',
-    segments: Array.from({ length: 9 }, (_, i) => `${i + 1}개월 차`),
-  },
 ]
+
+/** 목표 탭에서 선택 가능한 줌 = 일 단위만 */
+export const GOAL_DM_ZOOM = [...GOAL_DM_ZOOM_DAYS]
 
 /** 1·3·7·15일: 선택 구간과 관계없이 보기 단위 제목 (예: 3일 작업 내역) */
 const DM_DETAIL_ZOOM_ONLY = new Set(['dm_1d', 'dm_3d', 'dm_7d', 'dm_15d'])

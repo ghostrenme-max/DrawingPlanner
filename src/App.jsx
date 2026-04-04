@@ -311,7 +311,6 @@ function App() {
   const [monthlyGoals, setMonthlyGoals] = useState(() => loadMonthlyGoalsFromStorage())
   const [trackerCards, setTrackerCards] = useState(() => loadTrackerCardsFromStorage())
   const [feedbackCards, setFeedbackCards] = useState(() => loadFeedbackCardsFromStorage())
-  const [goalStartDate, setGoalStartDate] = useState('')
   const [goal1yMainStrip, setGoal1yMainStrip] = useState(
     /** @type {'tip' | 'sample' | 'hidden'} */ ('tip'),
   )
@@ -500,7 +499,6 @@ function App() {
     setMonthlyGoals(Array.from({ length: 12 }, () => ''))
     setTrackerCards(createDefaultTrackerCards(t))
     setFeedbackCards([])
-    setGoalStartDate('')
     try {
       window.localStorage.removeItem(TRACKER_CARDS_LS)
       window.localStorage.removeItem(TRACKER_CARRY_YM_LS)
@@ -633,7 +631,6 @@ function App() {
             onTabChange={handleAppNav}
             features={appFeatures}
             goalTexts={goalTexts}
-            goalStartDate={goalStartDate}
             monthlyGoals={monthlyGoals}
             onMonthlyGoalsChange={setMonthlyGoals}
             trackerCards={trackerCards}
@@ -671,8 +668,6 @@ function App() {
             onThemeIndexChange={setThemeIndex}
             goalTexts={goalTexts}
             onGoalTextsChange={setGoalTexts}
-            goalStartDate={goalStartDate}
-            onGoalStartDateChange={setGoalStartDate}
             monthlyGoals={monthlyGoals}
             onMonthlyGoalsChange={setMonthlyGoals}
           />

@@ -20,14 +20,6 @@
   gap: 4px;
 }
 
-.setting-about-mark-wrap .setting-mark-dot-main {
-  fill: var(--ww-main);
-}
-
-.setting-about-mark-wrap .setting-mark-dot-sub {
-  fill: var(--ww-sub);
-}
-
 .setting-scroll {
   flex: 1;
   min-height: 0;
@@ -60,7 +52,7 @@
 }
 
 .setting-card {
-  /* #17161A 위에 rgba(255,255,255,0.04) 카드 면과 동일 톤 — ABOUT 숨김 언더바용 */
+  /* #17161A 위에 rgba(255,255,255,0.04) 카드 면과 동일 톤 */
   --setting-card-face: rgb(32, 31, 35);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -73,10 +65,6 @@
 .setting-card--flush {
   padding-top: 4px;
   padding-bottom: 4px;
-}
-
-.setting-card--about {
-  text-align: center;
 }
 
 .setting-card--goals {
@@ -212,12 +200,6 @@
 .setting-row--toggle {
   cursor: default;
   min-height: 44px;
-}
-
-.setting-row--version {
-  min-height: 36px;
-  padding: 6px 0;
-  cursor: default;
 }
 
 .setting-row-label {
@@ -442,51 +424,6 @@
   line-height: 1.3;
 }
 
-.setting-about-mark-wrap {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 10px;
-}
-
-.setting-about-wordmark {
-  margin: 0 0 8px;
-  font-family: 'Plus Jakarta Sans', 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-  font-weight: 800;
-  font-size: 16px;
-  color: #ffffff;
-  letter-spacing: -0.03em;
-}
-
-.setting-about-wordmark .setting-about-i {
-  color: var(--ww-main);
-}
-
-.setting-about-wordmark .setting-about-o {
-  color: var(--ww-sub);
-}
-
-.setting-about-sep {
-  font-weight: 800;
-  color: var(--setting-card-face);
-  user-select: none;
-}
-
-.setting-about-tagline {
-  margin: 0 0 12px;
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.2);
-}
-
-.setting-version-left,
-.setting-version-right {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
 .setting-nav {
   flex-shrink: 0;
   display: flex;
@@ -541,4 +478,289 @@
 
 .setting-nav-item--active .setting-nav-icon {
   opacity: 1;
+}
+
+/* —— SNS 공유 허브 —— */
+.sns-share-lead {
+  margin: 0 0 10px;
+  font-family: 'DM Mono', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+  max-width: 42em;
+}
+
+.sns-share-card {
+  padding-bottom: 16px;
+}
+
+.sns-share-subtitle {
+  margin: 0 0 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+}
+
+.sns-share-label {
+  display: block;
+  margin: 0 0 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.06em;
+}
+
+.sns-share-add-row {
+  margin-bottom: 10px;
+}
+
+.sns-share-select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sns-share-input {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.sns-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sns-share-btn--add {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.sns-share-btn--primary {
+  width: 100%;
+  margin-top: 12px;
+  border-color: rgba(var(--ww-main-rgb), 0.45);
+  background: rgba(var(--ww-main-rgb), 0.14);
+  color: var(--ww-main);
+}
+
+.sns-share-btn--ghost {
+  flex: 1;
+  min-width: 0;
+}
+
+.sns-share-btn:active {
+  opacity: 0.88;
+}
+
+.sns-share-empty {
+  margin: 0 0 12px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1.45;
+}
+
+.sns-share-channel-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.sns-share-channel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sns-share-channel-item:last-child {
+  border-bottom: none;
+}
+
+.sns-share-channel-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sns-share-icon-svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.sns-share-channel-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sns-share-channel-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sns-share-channel-url {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+.sns-share-channel-remove {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 80, 80, 0.12);
+  color: rgba(255, 160, 160, 0.95);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sns-share-divider {
+  margin: 16px 0 !important;
+}
+
+.sns-share-textarea {
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  min-height: 96px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sns-share-image-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.sns-share-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sns-share-preview-wrap {
+  margin-bottom: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-height: 200px;
+}
+
+.sns-share-preview-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sns-share-open-wrap {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sns-share-open-hint {
+  margin: 0 0 10px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: rgba(var(--ww-sub-rgb), 0.95);
+}
+
+.sns-share-open-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sns-share-open-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.25;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sns-share-open-btn .sns-share-icon-svg {
+  width: 22px;
+  height: 22px;
+  color: var(--ww-main);
+}
+
+.sns-share-open-btn:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 400px) {
+  .sns-share-open-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }

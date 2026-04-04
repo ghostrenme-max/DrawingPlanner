@@ -5,6 +5,7 @@ import { APP_THEME_PRESETS } from './appTheme.js'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import { createEmptyGoalTexts } from './goalConfig.js'
 import BrandWordmark from './BrandWordmark.jsx'
+import SnsShareHubSection from './components/SnsShareHubSection.jsx'
 import { hideBanner, shouldShowBannerOnThisTabVisit, showBanner } from './hooks/useAdMob.js'
 
 /** 설정 GOALS · DAY 탭 (goalTexts 키는 기존 dm_* 와 동일) */
@@ -15,40 +16,7 @@ const GOAL_TAB_DAY_ROWS = [
   { id: 'dm_15d', label: '15 days' },
 ]
 
-const GOAL_TAB_YEAR_ROWS = [
-  { id: '1y', label: '1 year' },
-  { id: '3y', label: '3 years' },
-  { id: '5y', label: '5 years' },
-  { id: '10y', label: '10 years' },
-]
 import './SettingScreen.css'
-
-/** 스플래시와 동일 W 곡선 + 점 (viewBox 0 0 500 500) */
-const MARK_PATH =
-  'M102.5,285.4c0,0,13,30,43,20s40-90,70-85s34,65,64,50c30-15,58-105,118-147'
-
-function SettingsMarkSvg({ size, className = '' }) {
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 500 500"
-      aria-hidden
-    >
-      <path
-        d={MARK_PATH}
-        fill="none"
-        stroke="#FFFFFF"
-        strokeWidth={28}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle className="setting-mark-dot-main" cx={136.7} cy={353.8} r={22.8} />
-      <circle className="setting-mark-dot-sub" cx={271.2} cy={320.7} r={25.7} />
-    </svg>
-  )
-}
 
 /**
  * @param {{
@@ -61,8 +29,6 @@ function SettingsMarkSvg({ size, className = '' }) {
  *   onThemeIndexChange: (index: number) => void
  *   goalTexts: Record<string, string>
  *   onGoalTextsChange: (value: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
- *   goalStartDate: string
- *   onGoalStartDateChange: (value: string) => void
  *   monthlyGoals: string[]
  *   onMonthlyGoalsChange: (value: string[] | ((prev: string[]) => string[])) => void
  * }} props
@@ -77,8 +43,6 @@ export default function SettingScreen({
   onThemeIndexChange,
   goalTexts,
   onGoalTextsChange,
-  goalStartDate,
-  onGoalStartDateChange,
   monthlyGoals,
   onMonthlyGoalsChange,
 }) {
@@ -115,7 +79,7 @@ export default function SettingScreen({
   const [nickname, setNickname] = useState('')
   const [creativeField, setCreativeField] = useState('')
   const [goalOpenId, setGoalOpenId] = useState(/** @type {string | null} */ (null))
-  const [activeGoalTab, setActiveGoalTab] = useState(/** @type {'day' | 'month' | 'year'} */ ('day'))
+  const [activeGoalTab, setActiveGoalTab] = useState(/** @type {'day' | 'month'} */ ('day'))
   const [expandedMonth, setExpandedMonth] = useState(/** @type {number | null} */ (null))
   const toggleFeature = useCallback(
     (key) => {
@@ -134,7 +98,6 @@ export default function SettingScreen({
     setNickname('')
     setCreativeField('')
     onGoalTextsChange(createEmptyGoalTexts())
-    onGoalStartDateChange('')
     setGoalOpenId(null)
     setExpandedMonth(null)
     setActiveGoalTab('day')
@@ -232,15 +195,6 @@ export default function SettingScreen({
               >
                 {t.setting.goalsTabMonth}
               </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeGoalTab === 'year'}
-                className={`setting-goals-tab${activeGoalTab === 'year' ? ' setting-goals-tab--active' : ''}`}
-                onClick={() => setActiveGoalTab('year')}
-              >
-                {t.setting.goalsTabYear}
-              </button>
             </div>
 
             {activeGoalTab === 'day' ? (
@@ -328,46 +282,6 @@ export default function SettingScreen({
                 })}
               </div>
             ) : null}
-
-            {activeGoalTab === 'year' ? (
-              <div role="tabpanel" aria-label="YEAR">
-                {GOAL_TAB_YEAR_ROWS.map((row, idx) => (
-                  <div key={row.id}>
-                    {idx > 0 ? <div className="setting-divider" /> : null}
-                    <div className="setting-goal-block">
-                      <button
-                        type="button"
-                        className="setting-row setting-row--chevron"
-                        onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
-                      >
-                        <span className="setting-row-label setting-row-label--goal-en">{row.label}</span>
-                        <span className="setting-row-chevron">{t.setting.editChevron}</span>
-                      </button>
-                      {goalOpenId === row.id ? (
-                        <textarea
-                          className="setting-goal-textarea"
-                          rows={3}
-                          value={goalTexts[row.id] ?? ''}
-                          onChange={(e) =>
-                            onGoalTextsChange((prev) => ({ ...prev, [row.id]: e.target.value }))
-                          }
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-                <div className="setting-divider" />
-                <div className="setting-row setting-row--input">
-                  <span className="setting-row-label">{t.setting.startDate}</span>
-                  <input
-                    type="date"
-                    className="setting-input-date"
-                    value={goalStartDate}
-                    onChange={(e) => onGoalStartDateChange(e.target.value)}
-                  />
-                </div>
-              </div>
-            ) : null}
           </div>
         </section>
 
@@ -394,6 +308,8 @@ export default function SettingScreen({
             </div>
           </div>
         </section>
+
+        <SnsShareHubSection />
 
         <section className="setting-section">
           <h2 className="setting-section-label">{t.setting.sections.language}</h2>
@@ -447,34 +363,6 @@ export default function SettingScreen({
               <span className="setting-row-label setting-row-label--danger">{t.setting.data.deleteGallery}</span>
               <span className="setting-row-chevron">›</span>
             </button>
-          </div>
-        </section>
-
-        <section className="setting-section">
-          <h2 className="setting-section-label">{t.setting.sections.about}</h2>
-          <div className="setting-card setting-card--about">
-            <div className="setting-about-mark-wrap">
-              <SettingsMarkSvg size={40} />
-            </div>
-            <p className="setting-about-wordmark" aria-label={t.setting.aboutWordmarkAria}>
-              <span>w</span>
-              <span className="setting-about-i">i</span>
-              <span>th</span>
-              <span className="setting-about-sep" aria-hidden>
-                _
-              </span>
-              <span>w</span>
-              <span className="setting-about-o">o</span>
-              <span>rth</span>
-            </p>
-            {t.tagline?.trim() ? (
-              <p className="setting-about-tagline">{t.tagline}</p>
-            ) : null}
-            <div className="setting-divider" />
-            <div className="setting-row setting-row--version">
-              <span className="setting-version-left">{t.setting.version}</span>
-              <span className="setting-version-right">0.1.0</span>
-            </div>
           </div>
         </section>
       </div>

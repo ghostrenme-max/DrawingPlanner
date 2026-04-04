@@ -6,13 +6,7 @@ import {
   createEmptyGoalTexts,
   GOAL_DM_ZOOM,
   splitGoalHeaderParagraphs,
-  yearHorizonToGoalKey,
 } from './goalConfig.js'
-import {
-  computeYearTimeline,
-  horizonYearsFromTab,
-  normalizeGoalStart,
-} from './goalYearTimeline.js'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GoalScreen.css'
@@ -73,6 +67,64 @@ function currentYearMonth() {
 
 function padMonth1to12(m) {
   return String(m).padStart(2, '0')
+}
+
+/** 월별: 연도 12칸 기준 분기 끝(3·6·9·12월) 서브컬러 강조 */
+const QUARTER_HIGHLIGHT_MONTH_NUM = [3, 6, 9, 12]
+
+function isQuarterHighlightMonth(monthIndex0) {
+  return QUARTER_HIGHLIGHT_MONTH_NUM.includes(monthIndex0 + 1)
+}
+
+/** 일별 하단 그래프 축 눈금 */
+const GOAL_DAILY_AXIS_TICKS = [1, 5, 10, 15, 20, 25, 30]
+
+/** 일별 1~4주차에 대응하는 달의 일자(1~30, 겹침 없음): 1~6, 7~13, 14~21, 22~30 */
+const DAILY_WEEK_DAY_RANGES = [
+  { start: 1, end: 6 },
+  { start: 7, end: 13 },
+  { start: 14, end: 21 },
+  { start: 22, end: 30 },
+]
+
+const DAILY_WEEK_DM_ZOOM_IDS = /** @type {const} */ (['dm_1d', 'dm_3d', 'dm_7d', 'dm_15d'])
+
+/** 오늘 날짜(일)가 속한 이번 달 주차 1~4 (구간 밖 일은 말단 주차) */
+function weekOfMonthForCalendarDay(dayOfMonth) {
+  const d = Math.min(Math.max(1, dayOfMonth), 31)
+  for (let i = 0; i < DAILY_WEEK_DAY_RANGES.length; i++) {
+    const { start, end } = DAILY_WEEK_DAY_RANGES[i]
+    if (d >= start && d <= end) return /** @type {1 | 2 | 3 | 4} */ (i + 1)
+  }
+  return 4
+}
+
+/** 선택한 연·월에서 주차 구간의 실제 달력 일자 (MM.DD~MM.DD, 말일 초과는 클램프) */
+function formatDailyWeekCalendarRange(year, monthIndex0, startDay, endDay) {
+  if (startDay > endDay) return ''
+  const lastDom = new Date(year, monthIndex0 + 1, 0).getDate()
+  const s = Math.min(Math.max(1, startDay), lastDom)
+  const e = Math.min(Math.max(1, endDay), lastDom)
+  if (s > e) return ''
+  const pad2 = (n) => String(n).padStart(2, '0')
+  const mm = pad2(monthIndex0 + 1)
+  return `${mm}.${pad2(s)}~${mm}.${pad2(e)}`
+}
+
+/**
+ * 헤더·주차 행 공통: n주차 + 실제 날짜 구간 문구
+ * @param {1 | 2 | 3 | 4} week1to4
+ */
+function formatDailyToolbarLineForWeek(week1to4, year, monthIndex0, t) {
+  const r = DAILY_WEEK_DAY_RANGES[week1to4 - 1] ?? DAILY_WEEK_DAY_RANGES[0]
+  const range = formatDailyWeekCalendarRange(year, monthIndex0, r.start, r.end)
+  return t.goal.periodToolbarDailyWeek.replace('{w}', String(week1to4)).replace('{range}', range)
+}
+
+/** 1..30일 막대 높이 % (하단에서 상승) */
+function risingHeightPercent(day1to30) {
+  const t = day1to30 / 30
+  return Math.max(5, Math.round(100 * t))
 }
 
 function ymForYearMonth(gridYear, monthIndex0) {
@@ -170,7 +222,6 @@ function GoalPanelWorkRow({ name, done, carry, rowDelayMs, dotsPlay, reducedMoti
  * @param {{
  *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
  *   goalTexts?: Record<string, string>
- *   goalStartDate?: string
  *   monthlyGoals?: string[]
  *   onMonthlyGoalsChange?: (updater: (prev: string[]) => string[]) => void
  *   trackerCards?: Record<string, unknown>[]
@@ -180,7 +231,6 @@ export default function GoalScreen({
   onTabChange,
   features = DEFAULT_APP_FEATURES,
   goalTexts = createEmptyGoalTexts(),
-  goalStartDate = '',
   monthlyGoals = [],
   onMonthlyGoalsChange,
   trackerCards = [],
@@ -189,8 +239,7 @@ export default function GoalScreen({
   const { year: calendarYear } = currentYearMonth()
   const gridYear = calendarYear
 
-  const [goalScope, setGoalScope] = useState(/** @type {'year' | 'dayMonth'} */ ('year'))
-  const [activeHorizon, setActiveHorizon] = useState(/** @type {'1' | '3' | '5' | '10'} */ ('1'))
+  const [goalScope, setGoalScope] = useState(/** @type {'monthly' | 'daily'} */ ('monthly'))
   const [dmZoomId, setDmZoomId] = useState(GOAL_DM_ZOOM[0].id)
   const [barsPlay, setBarsPlay] = useState(false)
   const [headerPctDisplay, setHeaderPctDisplay] = useState(0)
@@ -200,6 +249,35 @@ export default function GoalScreen({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [taskDotsPlay, setTaskDotsPlay] = useState(false)
   const [startAnim, setStartAnim] = useState(false)
+  /** 일별 하단: 1~4주차 */
+  const [selectedWeekOfMonth, setSelectedWeekOfMonth] = useState(/** @type {1 | 2 | 3 | 4} */ (1))
+  /** 일별 탭을 누를 때마다 증가 → 완성 작업 줄 긋기 애니 재생 */
+  const [dailyStrikeReplay, setDailyStrikeReplay] = useState(0)
+
+  useEffect(() => {
+    if (!GOAL_DM_ZOOM.some((z) => z.id === dmZoomId)) {
+      setDmZoomId(GOAL_DM_ZOOM[0].id)
+    }
+  }, [dmZoomId])
+
+  useEffect(() => {
+    if (goalScope !== 'daily') return
+    const idx = Math.min(Math.max(selectedWeekOfMonth, 1), 4) - 1
+    setDmZoomId(DAILY_WEEK_DM_ZOOM_IDS[idx])
+  }, [goalScope, selectedWeekOfMonth])
+
+  const nowClock = new Date()
+  const dailyMaxSelectableWeek =
+    gridYear === nowClock.getFullYear() && selectedMonthIndex === nowClock.getMonth()
+      ? weekOfMonthForCalendarDay(nowClock.getDate())
+      : /** @type {1 | 2 | 3 | 4} */ (4)
+
+  useEffect(() => {
+    if (goalScope !== 'daily') return
+    if (selectedWeekOfMonth > dailyMaxSelectableWeek) {
+      setSelectedWeekOfMonth(dailyMaxSelectableWeek)
+    }
+  }, [goalScope, dailyMaxSelectableWeek, selectedWeekOfMonth])
 
   const goals12 = useMemo(() => {
     const g = Array.isArray(monthlyGoals) ? [...monthlyGoals] : []
@@ -211,6 +289,12 @@ export default function GoalScreen({
     const ym = ymForYearMonth(gridYear, selectedMonthIndex)
     return trackerCards.filter((c) => c && typeof c === 'object' && c.activeMonthYm === ym)
   }, [trackerCards, gridYear, selectedMonthIndex])
+
+  /** 일별 탭: 트래커 전체 카드(읽기 전용) */
+  const allTrackerCardsList = useMemo(
+    () => trackerCards.filter((c) => c && typeof c === 'object'),
+    [trackerCards],
+  )
 
   const monthProgress = useMemo(
     () =>
@@ -260,7 +344,7 @@ export default function GoalScreen({
     setHeaderPctDisplay(0)
     const t = window.setTimeout(() => setBarsPlay(true), 80)
     return () => window.clearTimeout(t)
-  }, [goalScope, dmZoomId, activeHorizon])
+  }, [goalScope, dmZoomId, selectedMonthIndex])
 
   const monthProgressRef = useRef(monthProgress)
   monthProgressRef.current = monthProgress
@@ -313,56 +397,16 @@ export default function GoalScreen({
     if (startAnim) setTaskDotsPlay(true)
   }, [selectedMonthIndex, barsPlay, prefersReducedMotion, mbarSnap, startAnim])
 
-  const yearView = useMemo(() => {
-    if (goalScope !== 'year') {
-      return {
-        slots: [],
-        barTargetPcts: [],
-        overallPct: 0,
-        currentSlotIndex: -1,
-        periodLabel: '',
-        totalMonths: 0,
-      }
-    }
-    const start = normalizeGoalStart(goalStartDate)
-    const hy = horizonYearsFromTab(activeHorizon)
-    return computeYearTimeline(start, hy)
-  }, [goalScope, goalStartDate, activeHorizon])
-
-  /** 올해 트래커 카드 평균 진행률 — 있으면 헤더·숫자 애니가 100%까지 올라갈 수 있음 */
-  const yearTrackerAvgPct = useMemo(() => {
-    const yp = `${gridYear}-`
-    const list = trackerCards.filter(
-      (c) =>
-        c &&
-        typeof c === 'object' &&
-        typeof c.activeMonthYm === 'string' &&
-        c.activeMonthYm.startsWith(yp),
-    )
-    if (list.length === 0) return null
-    return Math.round(
-      list.reduce((s, c) => s + (Number(c.percent) || 0), 0) / list.length,
-    )
-  }, [trackerCards, gridYear])
-
   const headerTargetPct =
-    goalScope === 'year'
-      ? yearTrackerAvgPct != null
-        ? yearTrackerAvgPct
-        : yearView.overallPct
-      : GOAL_PROGRESS_PERCENT
-  const isYear1HeaderLayout = goalScope === 'year' && activeHorizon === '1'
+    goalScope === 'monthly' ? monthProgress[selectedMonthIndex] ?? 0 : GOAL_PROGRESS_PERCENT
 
-  const dmSpec = useMemo(
-    () => GOAL_DM_ZOOM.find((z) => z.id === dmZoomId) ?? GOAL_DM_ZOOM[0],
-    [dmZoomId],
-  )
-  const dmZoomDisplayLabel = t.goal.dmZoom[dmZoomId] ?? dmSpec.label
+  const isMonthlyHeaderCentered =
+    goalScope === 'monthly' && (goals12[selectedMonthIndex] ?? '').trim().length > 0
 
   const isActiveGoalSettled = useMemo(() => {
-    const key = goalScope === 'year' ? yearHorizonToGoalKey(activeHorizon) : dmZoomId
-    return (goalTexts[key] ?? '').trim().length > 0
-  }, [goalScope, activeHorizon, dmZoomId, goalTexts])
+    if (goalScope === 'monthly') return (goals12[selectedMonthIndex] ?? '').trim().length > 0
+    return (goalTexts[dmZoomId] ?? '').trim().length > 0
+  }, [goalScope, selectedMonthIndex, goals12, dmZoomId, goalTexts])
 
   useEffect(() => {
     if (!barsPlay) return
@@ -425,116 +469,131 @@ export default function GoalScreen({
             <button
               type="button"
               role="tab"
-              aria-selected={goalScope === 'dayMonth'}
-              className={`goal-scope-chip${goalScope === 'dayMonth' ? ' goal-scope-chip--active' : ''}`}
-              onClick={() => setGoalScope('dayMonth')}
+              aria-selected={goalScope === 'daily'}
+              className={`goal-scope-chip${goalScope === 'daily' ? ' goal-scope-chip--active' : ''}`}
+              onClick={() => {
+                setGoalScope('daily')
+                setDailyStrikeReplay((n) => n + 1)
+              }}
             >
-              {t.goal.scopeDayMonth}
+              {t.goal.scopeDaily}
             </button>
             <button
               type="button"
               role="tab"
-              aria-selected={goalScope === 'year'}
-              className={`goal-scope-chip${goalScope === 'year' ? ' goal-scope-chip--active' : ''}`}
-              onClick={() => setGoalScope('year')}
+              aria-selected={goalScope === 'monthly'}
+              className={`goal-scope-chip${goalScope === 'monthly' ? ' goal-scope-chip--active' : ''}`}
+              onClick={() => setGoalScope('monthly')}
             >
-              {t.goal.scopeYear}
+              {t.goal.scopeMonthly}
             </button>
           </div>
 
-          {goalScope === 'year' ? (
+          {goalScope === 'monthly' ? (
             <div className="goal-tabs-scroll-wrap">
-              <div className="goal-tabs-scroll" role="tablist" aria-label={t.goal.horizonTabAria}>
+              <div className="goal-tabs-scroll" role="tablist" aria-label={t.goal.monthTabAria}>
                 <div className="goal-tabs-track">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeHorizon === '1'}
-                    className={`goal-tab${activeHorizon === '1' ? ' goal-tab--active' : ''}`}
-                    onClick={() => setActiveHorizon('1')}
-                  >
-                    {t.goal.tabs.one}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeHorizon === '3'}
-                    className={`goal-tab${activeHorizon === '3' ? ' goal-tab--active' : ''}`}
-                    onClick={() => setActiveHorizon('3')}
-                  >
-                    {t.goal.tabs.three}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeHorizon === '5'}
-                    className={`goal-tab${activeHorizon === '5' ? ' goal-tab--active' : ''}`}
-                    onClick={() => setActiveHorizon('5')}
-                  >
-                    {t.goal.tabs.five}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeHorizon === '10'}
-                    className={`goal-tab${activeHorizon === '10' ? ' goal-tab--active' : ''}`}
-                    onClick={() => setActiveHorizon('10')}
-                  >
-                    {t.goal.tabs.ten}
-                  </button>
+                  {Array.from({ length: 12 }, (_, mi) => {
+                    const m = mi + 1
+                    const label = t.common.monthSuffix ? `${m}${t.common.monthSuffix}` : String(m)
+                    const isQuarterHighlight = isQuarterHighlightMonth(mi)
+                    return (
+                      <button
+                        key={mi}
+                        type="button"
+                        role="tab"
+                        aria-selected={selectedMonthIndex === mi}
+                        className={[
+                          'goal-tab',
+                          selectedMonthIndex === mi ? 'goal-tab--active' : '',
+                          isQuarterHighlight ? 'goal-tab--quarter-highlight' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        onClick={() => setSelectedMonthIndex(mi)}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
                   <span className="goal-tabs-track-spacer" aria-hidden />
                 </div>
               </div>
             </div>
           ) : (
-            <div className="goal-zoom-row goal-zoom-row--wrap" aria-label={t.goal.dmZoomAria}>
-              <div className="goal-zoom-chips goal-zoom-chips--wrap" role="group">
-                {GOAL_DM_ZOOM.map((z, i) => (
-                  <span key={z.id} className="goal-zoom-chip-wrap">
-                    {i > 0 ? (
-                      <span className="goal-zoom-slash" aria-hidden>
-                        /
-                      </span>
-                    ) : null}
+            <div className="goal-daily-week-stack" role="tablist" aria-label={t.goal.dailyWeekRowAria}>
+              {DAILY_WEEK_DAY_RANGES.map((_, i) => {
+                const w = /** @type {1 | 2 | 3 | 4} */ (i + 1)
+                const lockedFuture = w > dailyMaxSelectableWeek
+                const periodLine = formatDailyToolbarLineForWeek(w, gridYear, selectedMonthIndex, t)
+                const daysId = `goal-daily-week-days-${w}`
+                return (
+                  <div
+                    key={w}
+                    className={[
+                      'goal-daily-week-block',
+                      lockedFuture ? 'goal-daily-week-block--future' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <span id={daysId} className="goal-daily-week-days-lbl">
+                      {periodLine}
+                    </span>
                     <button
                       type="button"
-                      className={`goal-zoom-chip${dmZoomId === z.id ? ' goal-zoom-chip--active' : ''}`}
-                      onClick={() => setDmZoomId(z.id)}
+                      role="tab"
+                      disabled={lockedFuture}
+                      aria-disabled={lockedFuture}
+                      aria-selected={selectedWeekOfMonth === w}
+                      aria-labelledby={daysId}
+                      title={lockedFuture ? t.goal.dailyWeekFutureHint : undefined}
+                      className={[
+                        'goal-daily-week-chip',
+                        selectedWeekOfMonth === w ? 'goal-daily-week-chip--active' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      onClick={() => {
+                        if (lockedFuture) return
+                        setSelectedWeekOfMonth(w)
+                      }}
                     >
-                      {t.goal.dmZoom[z.id] ?? z.label}
+                      {t.goal.dailyWeekLabels[w - 1]}
                     </button>
-                  </span>
-                ))}
-              </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
 
-        <div className={['goal-block', isYear1HeaderLayout ? 'goal-block--1y-centered' : ''].filter(Boolean).join(' ')}>
+        <div
+          className={['goal-block', isMonthlyHeaderCentered ? 'goal-block--1y-centered' : '']
+            .filter(Boolean)
+            .join(' ')}
+        >
           <div className="goal-period">
-            {goalScope === 'year'
-              ? t.goal.periodToolbarYear
-                  .replace('{label}', yearView.periodLabel)
-                  .replace('{n}', activeHorizon)
-              : t.goal.periodToolbarDm.replace('{label}', dmZoomDisplayLabel)}
+            {goalScope === 'monthly'
+              ? t.goal.periodToolbarMonthly
+                  .replace('{y}', String(gridYear))
+                  .replace('{n}', String(selectedMonthIndex + 1))
+              : formatDailyToolbarLineForWeek(
+                  selectedWeekOfMonth,
+                  gridYear,
+                  selectedMonthIndex,
+                  t,
+                )}
           </div>
-          {goalScope === 'year' ? (
-            (goalTexts[yearHorizonToGoalKey(activeHorizon)] ?? '').trim() ? (
-              isYear1HeaderLayout ? (
-                splitGoalHeaderParagraphs(goalTexts[yearHorizonToGoalKey(activeHorizon)] ?? '').map((para, idx) => (
-                  <p key={idx} className="goal-text goal-text--1y-body">
-                    {applyGoalDisplayBreaks(para)}
-                  </p>
-                ))
-              ) : (
-                <p className="goal-text" style={{ whiteSpace: 'pre-wrap' }}>
-                  {goalTexts[yearHorizonToGoalKey(activeHorizon)]}
+          {goalScope === 'monthly' ? (
+            selectedMonthGoalText.trim() ? (
+              splitGoalHeaderParagraphs(selectedMonthGoalText).map((para, idx) => (
+                <p key={idx} className="goal-text goal-text--1y-body">
+                  {applyGoalDisplayBreaks(para)}
                 </p>
-              )
-            ) : activeHorizon === '1' ? (
-              <p className="goal-text goal-text--muted">{t.goal.hintYearFromSettings}</p>
+              ))
             ) : (
-              <p className="goal-text goal-text--muted">{t.goal.unset}</p>
+              <p className="goal-text goal-text--muted">{t.goal.hintMonthlyFromSettings}</p>
             )
           ) : isActiveGoalSettled ? (
             <p className="goal-text" style={{ whiteSpace: 'pre-wrap' }}>
@@ -560,143 +619,253 @@ export default function GoalScreen({
       </header>
 
       <div className="goal-scroll">
-        <div className="goal-mbar-grid">
-          {Array.from({ length: 12 }, (_, i) => {
-            const m = i + 1
-            const pctLive = monthProgress[i] ?? 0
-            const prog = mbarSnap !== null ? mbarSnap[i] ?? 0 : pctLive
-            const selected = selectedMonthIndex === i
-            const barMs = getBarDurationMs(prog)
-            const cascadeDelay = getCascadeStartDelay(i, mbarSnap ?? monthProgress)
-            const showBar = pctLive > 0 || (mbarSnap !== null && prog > 0)
+        {goalScope === 'monthly' ? (
+          <>
+            <div className="goal-mbar-grid">
+              {Array.from({ length: 12 }, (_, i) => {
+                const m = i + 1
+                const isQuarterHighlight = isQuarterHighlightMonth(i)
+                const pctLive = monthProgress[i] ?? 0
+                const prog = mbarSnap !== null ? mbarSnap[i] ?? 0 : pctLive
+                const selected = selectedMonthIndex === i
+                const barMs = getBarDurationMs(prog)
+                const cascadeDelay = getCascadeStartDelay(i, mbarSnap ?? monthProgress)
+                const showBar = pctLive > 0 || (mbarSnap !== null && prog > 0)
 
-            const fillCascade =
-              mbarSnap !== null &&
-              barsPlay &&
-              !prefersReducedMotion &&
-              startAnim &&
-              barMs > 0
-            const fillStaticRm = barsPlay && prefersReducedMotion && getBarDurationMs(pctLive) > 0 && pctLive > 0
-            const fillStaticDone =
-              mbarSnap === null &&
-              barsPlay &&
-              !prefersReducedMotion &&
-              startAnim &&
-              pctLive > 0 &&
-              getBarDurationMs(pctLive) > 0
-            const fillIdle =
-              showBar && !fillCascade && !fillStaticRm && !fillStaticDone
+                const fillCascade =
+                  mbarSnap !== null &&
+                  barsPlay &&
+                  !prefersReducedMotion &&
+                  startAnim &&
+                  barMs > 0
+                const fillStaticRm =
+                  barsPlay && prefersReducedMotion && getBarDurationMs(pctLive) > 0 && pctLive > 0
+                const fillStaticDone =
+                  mbarSnap === null &&
+                  barsPlay &&
+                  !prefersReducedMotion &&
+                  startAnim &&
+                  pctLive > 0 &&
+                  getBarDurationMs(pctLive) > 0
+                const fillIdle =
+                  showBar && !fillCascade && !fillStaticRm && !fillStaticDone
 
-            return (
-              <div
-                key={i}
-                className="goal-mbar"
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedMonthIndex(i)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setSelectedMonthIndex(i)
-                  }
-                }}
-              >
-                <div className={`goal-mbar-outer${selected ? ' goal-mbar-outer--selected' : ''}`}>
-                  {showBar ? (
-                    <div
+                return (
+                  <div
+                    key={i}
+                    className="goal-mbar"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedMonthIndex(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedMonthIndex(i)
+                      }
+                    }}
+                  >
+                    <div className={`goal-mbar-outer${selected ? ' goal-mbar-outer--selected' : ''}`}>
+                      {showBar ? (
+                        <div
+                          className={[
+                            'goal-mbar-fill',
+                            fillStaticRm || fillStaticDone ? 'goal-mbar-fill--cascade-static' : '',
+                            fillCascade ? 'goal-mbar-fill--cascade' : '',
+                            fillIdle ? 'goal-mbar-fill--cascade-idle' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          style={{
+                            ['--target-height']: `${fillCascade || fillIdle ? prog : pctLive}%`,
+                            ['--cascade-duration']: `${barMs}ms`,
+                            ['--cascade-delay']: `${cascadeDelay}ms`,
+                          }}
+                        >
+                          {pctLive >= GOAL_MBAR_PCT_SHOW_MIN ? (
+                            <span className="goal-mbar-pct">{pctLive}%</span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                    <span
                       className={[
-                        'goal-mbar-fill',
-                        fillStaticRm || fillStaticDone ? 'goal-mbar-fill--cascade-static' : '',
-                        fillCascade ? 'goal-mbar-fill--cascade' : '',
-                        fillIdle ? 'goal-mbar-fill--cascade-idle' : '',
+                        'goal-mbar-lbl',
+                        isQuarterHighlight ? 'goal-mbar-lbl--quarter-highlight' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
-                      style={{
-                        ['--target-height']: `${fillCascade || fillIdle ? prog : pctLive}%`,
-                        ['--cascade-duration']: `${barMs}ms`,
-                        ['--cascade-delay']: `${cascadeDelay}ms`,
-                      }}
                     >
-                      {pctLive >= GOAL_MBAR_PCT_SHOW_MIN ? (
-                        <span className="goal-mbar-pct">{pctLive}%</span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-                <span className="goal-mbar-lbl">
-                  {t.common.monthSuffix ? `${m}${t.common.monthSuffix}` : `${m}`}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="goal-month-panel">
-          <div className="goal-month-panel-head">
-            <div className="goal-month-panel-head-label-row">
-              <span className="goal-month-panel-head-dot" aria-hidden />
-              <span className="goal-month-panel-head-title">
-                {t.goal.monthGoalTitle.replace('{n}', String(selectedMonthIndex + 1))}
-              </span>
-            </div>
-
-            {monthGoalEditing ? (
-              <input
-                type="text"
-                className="goal-month-panel-goal-input"
-                value={monthGoalDraft}
-                autoFocus
-                onChange={(e) => setMonthGoalDraft(e.target.value)}
-                onBlur={commitMonthGoal}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.currentTarget.blur()
-                }}
-                aria-label={t.goal.monthGoalEditAria.replace('{n}', String(selectedMonthIndex + 1))}
-              />
-            ) : showMonthGoalEmpty ? (
-              <button type="button" className="goal-month-panel-goal-empty" onClick={beginEditMonthGoal}>
-                {t.goal.addGoal}
-              </button>
-            ) : (
-              <button type="button" className="goal-month-panel-goal-text" onClick={beginEditMonthGoal}>
-                {selectedMonthGoalText}
-              </button>
-            )}
-
-            <p className="goal-month-panel-head-hint">{t.goal.tapToEdit}</p>
-          </div>
-
-          <div className="goal-month-panel-body">
-            <div className="goal-month-panel-body-label">
-              {t.goal.monthWorkHistory.replace('{n}', String(selectedMonthIndex + 1))}
-            </div>
-            {cardsForSelectedMonth.length === 0 ? (
-              <p className="goal-month-panel-empty-tasks">{t.goal.noWork}</p>
-            ) : (
-              cardsForSelectedMonth.map((card, rowIndex) => {
-                const displayName =
-                  typeof card.displayTag === 'string'
-                    ? card.displayTag
-                    : typeof card.title === 'string'
-                      ? card.title
-                      : t.common.workFallback
-                const done = filledWorkDots(card)
-                return (
-                  <GoalPanelWorkRow
-                    key={String(card.id)}
-                    name={displayName}
-                    done={done}
-                    carry={Boolean(card.isCarryOver)}
-                    rowDelayMs={workRowDotBaseDelaysMs[rowIndex] ?? 0}
-                    dotsPlay={taskDotsPlay}
-                    reducedMotion={prefersReducedMotion}
-                  />
+                      {t.common.monthSuffix ? `${m}${t.common.monthSuffix}` : `${m}`}
+                    </span>
+                  </div>
                 )
-              })
-            )}
+              })}
+            </div>
+
+            <div className="goal-month-panel">
+              <div className="goal-month-panel-head">
+                <div className="goal-month-panel-head-label-row">
+                  <span className="goal-month-panel-head-dot" aria-hidden />
+                  <span className="goal-month-panel-head-title">
+                    {t.goal.monthGoalTitle.replace('{n}', String(selectedMonthIndex + 1))}
+                  </span>
+                </div>
+
+                {monthGoalEditing ? (
+                  <input
+                    type="text"
+                    className="goal-month-panel-goal-input"
+                    value={monthGoalDraft}
+                    autoFocus
+                    onChange={(e) => setMonthGoalDraft(e.target.value)}
+                    onBlur={commitMonthGoal}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
+                    }}
+                    aria-label={t.goal.monthGoalEditAria.replace('{n}', String(selectedMonthIndex + 1))}
+                  />
+                ) : showMonthGoalEmpty ? (
+                  <button type="button" className="goal-month-panel-goal-empty" onClick={beginEditMonthGoal}>
+                    {t.goal.addGoal}
+                  </button>
+                ) : (
+                  <button type="button" className="goal-month-panel-goal-text" onClick={beginEditMonthGoal}>
+                    {selectedMonthGoalText}
+                  </button>
+                )}
+
+                <p className="goal-month-panel-head-hint">{t.goal.tapToEdit}</p>
+              </div>
+
+              <div className="goal-month-panel-body">
+                <div className="goal-month-panel-body-label">
+                  {t.goal.monthWorkHistory.replace('{n}', String(selectedMonthIndex + 1))}
+                </div>
+                {cardsForSelectedMonth.length === 0 ? (
+                  <p className="goal-month-panel-empty-tasks">{t.goal.noWork}</p>
+                ) : (
+                  cardsForSelectedMonth.map((card, rowIndex) => {
+                    const displayName =
+                      typeof card.displayTag === 'string'
+                        ? card.displayTag
+                        : typeof card.title === 'string'
+                          ? card.title
+                          : t.common.workFallback
+                    const done = filledWorkDots(card)
+                    return (
+                      <GoalPanelWorkRow
+                        key={String(card.id)}
+                        name={displayName}
+                        done={done}
+                        carry={Boolean(card.isCarryOver)}
+                        rowDelayMs={workRowDotBaseDelaysMs[rowIndex] ?? 0}
+                        dotsPlay={taskDotsPlay}
+                        reducedMotion={prefersReducedMotion}
+                      />
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="goal-daily-chart">
+            <div className="goal-dbar-rising-card">
+              <div
+                className="goal-dbar-rising"
+                role="img"
+                aria-label={t.goal.dailyRisingAria}
+              >
+                {Array.from({ length: 30 }, (_, i) => {
+                  const day = i + 1
+                  const h = risingHeightPercent(day)
+                  const delayMs = prefersReducedMotion ? 0 : i * 22
+                  return (
+                    <div key={day} className="goal-dbar-col">
+                      <div className="goal-dbar-track">
+                        <div
+                          className={[
+                            'goal-dbar-fill',
+                            barsPlay ? 'goal-dbar-fill--active' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          style={{
+                            ['--dbar-height-pct']: `${h}%`,
+                            transitionDelay: barsPlay ? `${delayMs}ms` : '0ms',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="goal-dbar-axis" aria-hidden>
+                {GOAL_DAILY_AXIS_TICKS.map((d) => (
+                  <span key={d} className="goal-dbar-axis-tick">
+                    {t.goal.dayAxisLabel.replace('{d}', String(d))}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="goal-daily-tracker-panel">
+              <div className="goal-daily-tracker-head">{t.goal.dailyTrackerListTitle}</div>
+              {allTrackerCardsList.length === 0 ? (
+                <p className="goal-daily-tracker-empty">{t.goal.dailyTrackerEmpty}</p>
+              ) : (
+                <ul
+                  className="goal-daily-tracker-list"
+                  role="list"
+                  key={dailyStrikeReplay}
+                >
+                  {(() => {
+                    let strikeSeq = 0
+                    return allTrackerCardsList.map((card, idx) => {
+                      const finalized = Boolean(card.workFinalized)
+                      const strikeI = finalized ? strikeSeq++ : null
+                      const displayName =
+                        typeof card.displayTag === 'string'
+                          ? card.displayTag
+                          : typeof card.title === 'string'
+                            ? card.title
+                            : t.common.workFallback
+                      const key = card.id != null ? String(card.id) : `tracker-${idx}`
+                      return (
+                        <li
+                          key={key}
+                          className={[
+                            'goal-daily-tracker-item',
+                            finalized ? 'goal-daily-tracker-item--finalized' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          aria-label={
+                            finalized
+                              ? `${displayName} — ${t.goal.dailyTrackerFinalizedSuffix}`
+                              : displayName
+                          }
+                        >
+                          <span
+                            className="goal-daily-tracker-item-name"
+                            style={
+                              strikeI != null
+                                ? { ['--strike-i']: String(strikeI) }
+                                : undefined
+                            }
+                          >
+                            {displayName}
+                          </span>
+                        </li>
+                      )
+                    })
+                  })()}
+                </ul>
+              )}
+              <p className="goal-daily-tracker-hint">{t.goal.dailyTrackerReadOnlyHint}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <nav className="goal-nav" aria-label={t.common.bottomNavAria}>
