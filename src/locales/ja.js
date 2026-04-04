@@ -1,6 +1,6 @@
 export const ja = {
   appName: 'withworth',
-  tagline: 'ともに、価値ある日々を',
+  tagline: 'ともに描いて、一筆ずつ',
   nav: {
     tracker: 'トラッカー',
     goal: '目標',

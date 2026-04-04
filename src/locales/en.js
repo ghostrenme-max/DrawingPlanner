@@ -1,6 +1,6 @@
 export const en = {
   appName: 'withworth',
-  tagline: 'Together, worthwhile',
+  tagline: 'Sketch to Finish, Never give up',
   nav: {
     tracker: 'Tracker',
     goal: 'Goals',

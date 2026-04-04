@@ -1,6 +1,6 @@
-/* Syne 대신: 기하학적 디스플레이 산세리프, ExtraBold — 유사 톤 */
+/* 스플래시 워드마크와 동일 톤 — 탭 헤더용 소형 */
 .brand-mark {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 800;
   font-size: 13px;
   color: #ffffff;
@@ -18,11 +18,4 @@
 
 .brand-mark-o {
   color: var(--ww-sub);
-}
-
-/* 화면 배경(#0a0a0a)과 동일 — 자리만 차지하고 보이지 않는 구분 */
-.brand-mark-sep {
-  color: #0a0a0a;
-  margin: 0 1px;
-  font-weight: 800;
 }

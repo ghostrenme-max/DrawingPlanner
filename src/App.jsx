@@ -127,7 +127,7 @@ const SPLASH_TAGLINE_AFTER_GATI_MS = 160
 const wordmarkShellStyle = {
   fontFamily: "'Inter', sans-serif",
   fontWeight: 800,
-  fontSize: '28px',
+  fontSize: 'clamp(17px, 4.6vw, 24px)',
   letterSpacing: '-0.5px',
   color: '#FFFFFF',
 }
@@ -177,11 +177,12 @@ function Wordmark() {
   return (
     <div className="splash-wordmark" style={{ marginTop: 20, padding: 0, textAlign: 'center' }}>
       <span style={wordmarkShellStyle}>
-        <span style={wordmarkWhite}>w</span>
-        <span className="splash-sync-i splash-color-main">i</span>
-        <span style={wordmarkWhite}>th w</span>
-        <span className="splash-sync-o splash-color-sub">o</span>
-        <span style={wordmarkWhite}>rth</span>
+        <span style={wordmarkWhite}>Dr</span>
+        <span className="splash-sync-i splash-color-main">a</span>
+        <span style={wordmarkWhite}>wing </span>
+        <span style={wordmarkWhite}>Pl</span>
+        <span className="splash-sync-o splash-color-sub">a</span>
+        <span style={wordmarkWhite}>nner</span>
       </span>
     </div>
   )
@@ -202,6 +203,7 @@ function splitTaglineForSplash(s) {
 }
 
 function SplashTagline({ tagline }) {
+  if (!tagline?.trim()) return null
   const { first, second, sep } = splitTaglineForSplash(tagline)
   return (
     <p

@@ -467,7 +467,9 @@ export default function SettingScreen({
               <span className="setting-about-o">o</span>
               <span>rth</span>
             </p>
-            <p className="setting-about-tagline">{t.tagline}</p>
+            {t.tagline?.trim() ? (
+              <p className="setting-about-tagline">{t.tagline}</p>
+            ) : null}
             <div className="setting-divider" />
             <div className="setting-row setting-row--version">
               <span className="setting-version-left">{t.setting.version}</span>

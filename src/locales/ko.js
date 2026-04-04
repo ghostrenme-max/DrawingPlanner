@@ -1,6 +1,6 @@
 export const ko = {
   appName: 'withworth',
-  tagline: '같이, 가치있게',
+  tagline: '포기하지 않고, 스케치에서 완성까지',
   nav: {
     tracker: '트래커',
     goal: '목표',
