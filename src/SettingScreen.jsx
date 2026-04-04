@@ -8,13 +8,8 @@ import BrandWordmark from './BrandWordmark.jsx'
 import SnsShareHubSection from './components/SnsShareHubSection.jsx'
 import { hideBanner, shouldShowBannerOnThisTabVisit, showBanner } from './hooks/useAdMob.js'
 
-/** 설정 GOALS · DAY 탭 (goalTexts 키는 기존 dm_* 와 동일) */
-const GOAL_TAB_DAY_ROWS = [
-  { id: 'dm_1d', label: '1 day' },
-  { id: 'dm_3d', label: '3 days' },
-  { id: 'dm_7d', label: '7 days' },
-  { id: 'dm_15d', label: '15 days' },
-]
+/** 설정 GOALS · WEEK 탭 (goalTexts 키는 dm_1d…dm_15d 그대로 — 목표 탭 1~4주차와 대응) */
+const GOAL_TAB_WEEK_ROW_IDS = /** @type {const} */ (['dm_1d', 'dm_3d', 'dm_7d', 'dm_15d'])
 
 import './SettingScreen.css'
 
@@ -79,7 +74,7 @@ export default function SettingScreen({
   const [nickname, setNickname] = useState('')
   const [creativeField, setCreativeField] = useState('')
   const [goalOpenId, setGoalOpenId] = useState(/** @type {string | null} */ (null))
-  const [activeGoalTab, setActiveGoalTab] = useState(/** @type {'day' | 'month'} */ ('day'))
+  const [activeGoalTab, setActiveGoalTab] = useState(/** @type {'week' | 'month'} */ ('week'))
   const [expandedMonth, setExpandedMonth] = useState(/** @type {number | null} */ (null))
   const toggleFeature = useCallback(
     (key) => {
@@ -100,7 +95,7 @@ export default function SettingScreen({
     onGoalTextsChange(createEmptyGoalTexts())
     setGoalOpenId(null)
     setExpandedMonth(null)
-    setActiveGoalTab('day')
+    setActiveGoalTab('week')
     onResetApp()
   }
 
@@ -180,11 +175,11 @@ export default function SettingScreen({
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeGoalTab === 'day'}
-                className={`setting-goals-tab${activeGoalTab === 'day' ? ' setting-goals-tab--active' : ''}`}
-                onClick={() => setActiveGoalTab('day')}
+                aria-selected={activeGoalTab === 'week'}
+                className={`setting-goals-tab${activeGoalTab === 'week' ? ' setting-goals-tab--active' : ''}`}
+                onClick={() => setActiveGoalTab('week')}
               >
-                {t.setting.goalsTabDay}
+                {t.setting.goalsTabWeek}
               </button>
               <button
                 type="button"
@@ -197,27 +192,29 @@ export default function SettingScreen({
               </button>
             </div>
 
-            {activeGoalTab === 'day' ? (
-              <div role="tabpanel" aria-label="DAY">
-                {GOAL_TAB_DAY_ROWS.map((row, idx) => (
-                  <div key={row.id}>
+            {activeGoalTab === 'week' ? (
+              <div role="tabpanel" aria-label={t.setting.goalsTabWeekPanelAria}>
+                {GOAL_TAB_WEEK_ROW_IDS.map((id, idx) => (
+                  <div key={id}>
                     {idx > 0 ? <div className="setting-divider" /> : null}
                     <div className="setting-goal-block">
                       <button
                         type="button"
                         className="setting-row setting-row--chevron"
-                        onClick={() => setGoalOpenId((o) => (o === row.id ? null : row.id))}
+                        onClick={() => setGoalOpenId((o) => (o === id ? null : id))}
                       >
-                        <span className="setting-row-label setting-row-label--goal-en">{row.label}</span>
+                        <span className="setting-row-label setting-row-label--goal-en">
+                          {t.goal.dailyWeekLabels[idx]}
+                        </span>
                         <span className="setting-row-chevron">{t.setting.editChevron}</span>
                       </button>
-                      {goalOpenId === row.id ? (
+                      {goalOpenId === id ? (
                         <textarea
                           className="setting-goal-textarea"
                           rows={3}
-                          value={goalTexts[row.id] ?? ''}
+                          value={goalTexts[id] ?? ''}
                           onChange={(e) =>
-                            onGoalTextsChange((prev) => ({ ...prev, [row.id]: e.target.value }))
+                            onGoalTextsChange((prev) => ({ ...prev, [id]: e.target.value }))
                           }
                         />
                       ) : null}

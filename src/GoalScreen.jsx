@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import {
@@ -7,6 +8,7 @@ import {
   GOAL_DM_ZOOM,
   splitGoalHeaderParagraphs,
 } from './goalConfig.js'
+import AppToast from './components/AppToast.jsx'
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import './GoalScreen.css'
@@ -54,7 +56,7 @@ function getCascadeTotalEndMs(progressArray) {
 }
 
 const GOAL_WORK_DOTS = 5
-/** 작업 행 도트 — 기존 GoalScreen TaskRow 타이밍 */
+/** 월별 작업 행 도트 애니메이션 타이밍 */
 const GOAL_TASK_DOT_STAGGER_MS = 100
 const GOAL_TASK_ROW_GAP_MS = 120
 const GOAL_TASK_DOT_ANIM_MS = 580
@@ -99,7 +101,7 @@ function weekOfMonthForCalendarDay(dayOfMonth) {
   return 4
 }
 
-/** 선택한 연·월에서 주차 구간의 실제 달력 일자 (MM.DD~MM.DD, 말일 초과는 클램프) */
+/** 선택한 연·월에서 주차 구간의 달력 일자 (MM.DD~MM.DD, 말일 초과는 클램프) */
 function formatDailyWeekCalendarRange(year, monthIndex0, startDay, endDay) {
   if (startDay > endDay) return ''
   const lastDom = new Date(year, monthIndex0 + 1, 0).getDate()
@@ -112,13 +114,15 @@ function formatDailyWeekCalendarRange(year, monthIndex0, startDay, endDay) {
 }
 
 /**
- * 헤더·주차 행 공통: n주차 + 실제 날짜 구간 문구
+ * 일별 헤더 기간: 주차 라벨 + 날짜 구간(「실제 날짜」 문구 없음)
  * @param {1 | 2 | 3 | 4} week1to4
  */
-function formatDailyToolbarLineForWeek(week1to4, year, monthIndex0, t) {
+function formatDailyHeaderPeriodLine(week1to4, year, monthIndex0, t) {
   const r = DAILY_WEEK_DAY_RANGES[week1to4 - 1] ?? DAILY_WEEK_DAY_RANGES[0]
   const range = formatDailyWeekCalendarRange(year, monthIndex0, r.start, r.end)
-  return t.goal.periodToolbarDailyWeek.replace('{w}', String(week1to4)).replace('{range}', range)
+  const label = t.goal.dailyWeekLabels[week1to4 - 1]
+  if (!range) return label
+  return t.goal.periodToolbarDailyWeek.replace('{label}', label).replace('{range}', range)
 }
 
 /** 1..30일 막대 높이 % (하단에서 상승) */
@@ -219,6 +223,50 @@ function GoalPanelWorkRow({ name, done, carry, rowDelayMs, dotsPlay, reducedMoti
 }
 
 /**
+ * 일별: 수행해야 할 작업 세로 목록 (완성 시 줄 긋기)
+ * @param {{ cards: Record<string, unknown>[]; t: { goal: Record<string, string>; common: Record<string, string> } }} props
+ */
+function GoalTrackerWorkList({ cards, t }) {
+  let strikeSeq = 0
+  return (
+    <ul className="goal-daily-tracker-list" role="list">
+      {cards.map((card, idx) => {
+        const finalized = Boolean(card.workFinalized)
+        const strikeI = finalized ? strikeSeq++ : null
+        const displayName =
+          typeof card.displayTag === 'string'
+            ? card.displayTag
+            : typeof card.title === 'string'
+              ? card.title
+              : t.common.workFallback
+        const key = card.id != null ? String(card.id) : `tracker-${idx}`
+        return (
+          <li
+            key={key}
+            className={[
+              'goal-daily-tracker-item',
+              finalized ? 'goal-daily-tracker-item--finalized' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-label={
+              finalized ? `${displayName} — ${t.goal.dailyTrackerFinalizedSuffix}` : displayName
+            }
+          >
+            <span
+              className="goal-daily-tracker-item-name"
+              style={strikeI != null ? { ['--strike-i']: String(strikeI) } : undefined}
+            >
+              {displayName}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
  * @param {{
  *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
  *   goalTexts?: Record<string, string>
@@ -253,6 +301,11 @@ export default function GoalScreen({
   const [selectedWeekOfMonth, setSelectedWeekOfMonth] = useState(/** @type {1 | 2 | 3 | 4} */ (1))
   /** 일별 탭을 누를 때마다 증가 → 완성 작업 줄 긋기 애니 재생 */
   const [dailyStrikeReplay, setDailyStrikeReplay] = useState(0)
+  /** 이번 달에서 ‘오늘 주차’가 아닌 주 탭 시 토스트 (key로 타이머 리셋) */
+  const [weekNavToast, setWeekNavToast] = useState(() => ({ key: 0, msg: '' }))
+  const closeWeekNavToast = useCallback(() => {
+    setWeekNavToast((prev) => ({ ...prev, msg: '' }))
+  }, [])
 
   useEffect(() => {
     if (!GOAL_DM_ZOOM.some((z) => z.id === dmZoomId)) {
@@ -370,7 +423,7 @@ export default function GoalScreen({
     return () => window.clearTimeout(t)
   }, [barsPlay])
 
-  /** 스냅샷 기준 연쇄 종료 시 스냅 해제 + 작업 도트 시작 (타이밍이 진행률 실시간 변경과 무관) */
+  /** 스냅샷 기준 연쇄 종료 시 스냅 해제 + 월별 작업 도트 행 시작 */
   useEffect(() => {
     if (!mbarSnap || !barsPlay || prefersReducedMotion) return
     const endMs = getCascadeTotalEndMs(mbarSnap) + GOAL_TASK_DOTS_AFTER_MBARS_MS
@@ -457,7 +510,10 @@ export default function GoalScreen({
     setMonthGoalEditing(false)
   }
 
+  const weekNavToastOpen = (weekNavToast.msg ?? '').length > 0
+
   return (
+    <>
     <div className={`goal-screen${barsPlay ? ' goal-screen--bars-play' : ''}`}>
       <header className="goal-header">
         <div className="goal-header-brand">
@@ -522,11 +578,17 @@ export default function GoalScreen({
             </div>
           ) : (
             <div className="goal-daily-week-stack" role="tablist" aria-label={t.goal.dailyWeekRowAria}>
-              {DAILY_WEEK_DAY_RANGES.map((_, i) => {
+              {DAILY_WEEK_DAY_RANGES.map((rangeRow, i) => {
                 const w = /** @type {1 | 2 | 3 | 4} */ (i + 1)
                 const lockedFuture = w > dailyMaxSelectableWeek
-                const periodLine = formatDailyToolbarLineForWeek(w, gridYear, selectedMonthIndex, t)
-                const daysId = `goal-daily-week-days-${w}`
+                const weekLbl = t.goal.dailyWeekLabels[w - 1]
+                const dateRange = formatDailyWeekCalendarRange(
+                  gridYear,
+                  selectedMonthIndex,
+                  rangeRow.start,
+                  rangeRow.end,
+                )
+                const tabAria = dateRange ? `${weekLbl}, ${dateRange}` : weekLbl
                 return (
                   <div
                     key={w}
@@ -537,16 +599,13 @@ export default function GoalScreen({
                       .filter(Boolean)
                       .join(' ')}
                   >
-                    <span id={daysId} className="goal-daily-week-days-lbl">
-                      {periodLine}
-                    </span>
                     <button
                       type="button"
                       role="tab"
-                      disabled={lockedFuture}
+                      tabIndex={lockedFuture ? -1 : 0}
                       aria-disabled={lockedFuture}
                       aria-selected={selectedWeekOfMonth === w}
-                      aria-labelledby={daysId}
+                      aria-label={tabAria}
                       title={lockedFuture ? t.goal.dailyWeekFutureHint : undefined}
                       className={[
                         'goal-daily-week-chip',
@@ -555,11 +614,34 @@ export default function GoalScreen({
                         .filter(Boolean)
                         .join(' ')}
                       onClick={() => {
-                        if (lockedFuture) return
+                        if (lockedFuture) {
+                          setWeekNavToast((prev) => ({
+                            key: prev.key + 1,
+                            msg: t.goal.dailyWeekFutureHint,
+                          }))
+                          return
+                        }
                         setSelectedWeekOfMonth(w)
+                        const now = new Date()
+                        const isThisCalendarMonth =
+                          gridYear === now.getFullYear() && selectedMonthIndex === now.getMonth()
+                        if (isThisCalendarMonth) {
+                          const todayWeek = weekOfMonthForCalendarDay(now.getDate())
+                          if (w !== todayWeek) {
+                            setWeekNavToast((prev) => ({
+                              key: prev.key + 1,
+                              msg: t.goal.dailyWeekOtherWeekToast,
+                            }))
+                          }
+                        }
                       }}
                     >
-                      {t.goal.dailyWeekLabels[w - 1]}
+                      <span className="goal-daily-week-chip-week">{weekLbl}</span>
+                      {dateRange ? (
+                        <span className="goal-daily-week-chip-dates" aria-hidden>
+                          {dateRange}
+                        </span>
+                      ) : null}
                     </button>
                   </div>
                 )
@@ -578,7 +660,7 @@ export default function GoalScreen({
               ? t.goal.periodToolbarMonthly
                   .replace('{y}', String(gridYear))
                   .replace('{n}', String(selectedMonthIndex + 1))
-              : formatDailyToolbarLineForWeek(
+              : formatDailyHeaderPeriodLine(
                   selectedWeekOfMonth,
                   gridYear,
                   selectedMonthIndex,
@@ -600,7 +682,7 @@ export default function GoalScreen({
               {goalTexts[dmZoomId]}
             </p>
           ) : (
-            <p className="goal-text goal-text--muted">{t.goal.unset}</p>
+            <p className="goal-text goal-text--muted">{t.goal.hintDailyWeekGoalsFromSettings}</p>
           )}
         </div>
 
@@ -814,53 +896,7 @@ export default function GoalScreen({
               {allTrackerCardsList.length === 0 ? (
                 <p className="goal-daily-tracker-empty">{t.goal.dailyTrackerEmpty}</p>
               ) : (
-                <ul
-                  className="goal-daily-tracker-list"
-                  role="list"
-                  key={dailyStrikeReplay}
-                >
-                  {(() => {
-                    let strikeSeq = 0
-                    return allTrackerCardsList.map((card, idx) => {
-                      const finalized = Boolean(card.workFinalized)
-                      const strikeI = finalized ? strikeSeq++ : null
-                      const displayName =
-                        typeof card.displayTag === 'string'
-                          ? card.displayTag
-                          : typeof card.title === 'string'
-                            ? card.title
-                            : t.common.workFallback
-                      const key = card.id != null ? String(card.id) : `tracker-${idx}`
-                      return (
-                        <li
-                          key={key}
-                          className={[
-                            'goal-daily-tracker-item',
-                            finalized ? 'goal-daily-tracker-item--finalized' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          aria-label={
-                            finalized
-                              ? `${displayName} — ${t.goal.dailyTrackerFinalizedSuffix}`
-                              : displayName
-                          }
-                        >
-                          <span
-                            className="goal-daily-tracker-item-name"
-                            style={
-                              strikeI != null
-                                ? { ['--strike-i']: String(strikeI) }
-                                : undefined
-                            }
-                          >
-                            {displayName}
-                          </span>
-                        </li>
-                      )
-                    })
-                  })()}
-                </ul>
+                <GoalTrackerWorkList key={dailyStrikeReplay} cards={allTrackerCardsList} t={t} />
               )}
               <p className="goal-daily-tracker-hint">{t.goal.dailyTrackerReadOnlyHint}</p>
             </div>
@@ -897,5 +933,15 @@ export default function GoalScreen({
         </button>
       </nav>
     </div>
+    {createPortal(
+      <AppToast
+        key={weekNavToast.key}
+        message={weekNavToast.msg ?? ''}
+        open={weekNavToastOpen}
+        onClose={closeWeekNavToast}
+      />,
+      document.body,
+    )}
+    </>
   )
 }

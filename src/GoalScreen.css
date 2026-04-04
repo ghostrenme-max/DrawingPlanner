@@ -779,25 +779,20 @@
 .goal-daily-week-block {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  align-items: stretch;
+  width: 100%;
 }
 
 .goal-daily-week-block--future {
   opacity: 0.38;
 }
 
-.goal-daily-week-days-lbl {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: rgba(var(--ww-sub-rgb), 0.75);
-  line-height: 1.35;
-  padding-left: 2px;
-}
-
 .goal-daily-week-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
   font-family: 'DM Mono', monospace;
   font-size: 9px;
   font-weight: 500;
@@ -810,6 +805,21 @@
   cursor: pointer;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.goal-daily-week-chip-week {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.goal-daily-week-chip-dates {
+  flex: 0 0 auto;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgba(var(--ww-sub-rgb), 0.72);
+  white-space: nowrap;
 }
 
 .goal-daily-week-chip--active {
@@ -818,7 +828,11 @@
   color: rgba(var(--ww-sub-rgb), 1);
 }
 
-.goal-daily-week-chip:disabled {
+.goal-daily-week-chip--active .goal-daily-week-chip-dates {
+  color: rgba(var(--ww-sub-rgb), 0.88);
+}
+
+.goal-daily-week-chip[aria-disabled='true'] {
   cursor: not-allowed;
 }
 

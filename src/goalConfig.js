@@ -1,10 +1,10 @@
-/** 설정·목표 탭 공통 — 일·분기(dm_q*) goalTexts 키 + 연간(1y…) 키 */
+/** 설정·목표 탭 공통 — 주차(dm_1d…15d = 1~4주차)·분기(dm_q*) goalTexts 키 + 연간(1y…) 키 */
 
 export const GOAL_DAY_MONTH_ROWS = [
-  { id: 'dm_1d', label: '1일' },
-  { id: 'dm_3d', label: '3일' },
-  { id: 'dm_7d', label: '7일' },
-  { id: 'dm_15d', label: '15일' },
+  { id: 'dm_1d', label: '1주차' },
+  { id: 'dm_3d', label: '2주차' },
+  { id: 'dm_7d', label: '3주차' },
+  { id: 'dm_15d', label: '4주차' },
   { id: 'dm_q1', label: '1분기' },
   { id: 'dm_q2', label: '2분기' },
   { id: 'dm_q3', label: '3분기' },
@@ -26,14 +26,14 @@ export function createEmptyGoalTexts() {
   return o
 }
 
-/** 목표 탭 일별 칩 (1·3·7·15일) */
+/** 목표 탭 일별 줌(키만 사용, 라벨은 로케일 dailyWeekLabels / dmZoom) */
 export const GOAL_DM_ZOOM_DAYS = [
-  { id: 'dm_1d', label: '1일', segments: ['1'] },
-  { id: 'dm_3d', label: '3일', segments: ['1', '2', '3'] },
-  { id: 'dm_7d', label: '7일', segments: ['1', '2', '3', '4', '5', '6', '7'] },
+  { id: 'dm_1d', label: '1주차', segments: ['1'] },
+  { id: 'dm_3d', label: '2주차', segments: ['1', '2', '3'] },
+  { id: 'dm_7d', label: '3주차', segments: ['1', '2', '3', '4', '5', '6', '7'] },
   {
     id: 'dm_15d',
-    label: '15일',
+    label: '4주차',
     segments: Array.from({ length: 15 }, (_, i) => String(i + 1)),
   },
 ]
@@ -47,7 +47,7 @@ const DM_DETAIL_ZOOM_ONLY = new Set(['dm_1d', 'dm_3d', 'dm_7d', 'dm_15d'])
 /**
  * @param {string} zoomId
  * @param {string} segmentLabel 막대 라벨
- * @param {string} zoomLabel 칩 라벨 (1일, 3개월 …)
+ * @param {string} zoomLabel 칩 라벨 (1주차 …)
  */
 export function getGoalDmDetailTitle(zoomId, segmentLabel, zoomLabel) {
   if (DM_DETAIL_ZOOM_ONLY.has(zoomId)) {
