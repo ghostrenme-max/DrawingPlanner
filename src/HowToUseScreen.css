@@ -1,0 +1,585 @@
+/* How to use — 온보딩 튜토리얼 4카드 */
+
+.how-to-use {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #17161a;
+  box-sizing: border-box;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.how-to-use-skip {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: #fb923c;
+  letter-spacing: 0.06em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.how-to-use-skip:active {
+  opacity: 0.82;
+}
+
+.how-to-use-slides {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 22px 8px;
+  box-sizing: border-box;
+}
+
+.how-to-use-card {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.how-to-use-step-body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.how-to-use-preview-wrap {
+  flex-shrink: 0;
+  width: 194px;
+  height: 242px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.how-to-use-preview-wrap .how-to-use-preview {
+  transform: scale(1.18);
+  transform-origin: center center;
+}
+
+/* —— 미니 프리뷰 공통 —— */
+.how-to-use-preview {
+  width: 160px;
+  height: 200px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* 카드1 트래커 */
+.how-to-use-p1-head {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Syne 대신 Plus Jakarta Sans 800 — 가로로 과하게 넓어 보이지 않게 */
+.how-to-use-p1-brand {
+  font-family: 'Plus Jakarta Sans', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 800;
+  font-size: 9px;
+  font-stretch: normal;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow:
+    -0.65px 0 0 rgba(45, 212, 191, 0.88),
+    0.65px 0 0 rgba(251, 146, 60, 0.92),
+    -1.25px 0 0 rgba(45, 212, 191, 0.22),
+    1.25px 0 0 rgba(251, 146, 60, 0.26);
+}
+
+.how-to-use-p1-a {
+  position: relative;
+}
+
+.how-to-use-p1-a--draw {
+  color: #fb923c;
+  text-shadow:
+    -0.5px 0 0 rgba(255, 255, 255, 0.55),
+    0.5px 0 0 rgba(45, 212, 191, 0.65),
+    -1px 0 0 rgba(251, 146, 60, 0.4),
+    1px 0 0 rgba(45, 212, 191, 0.25);
+}
+
+.how-to-use-p1-a--plan {
+  color: #2dd4bf;
+  text-shadow:
+    -0.5px 0 0 rgba(255, 255, 255, 0.5),
+    0.5px 0 0 rgba(251, 146, 60, 0.55),
+    -1px 0 0 rgba(251, 146, 60, 0.35),
+    1px 0 0 rgba(45, 212, 191, 0.3);
+}
+
+.how-to-use-p1-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: 18px;
+  font-weight: 500;
+  color: #fff;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.how-to-use-p1-bar {
+  margin-top: 6px;
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.how-to-use-p1-bar-fill {
+  height: 100%;
+  width: 64%;
+  background: #fb923c;
+  border-radius: 1px;
+}
+
+.how-to-use-p1-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 6px;
+}
+
+.how-to-use-p1-mini {
+  margin: 0 8px 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 7px 9px;
+  box-sizing: border-box;
+}
+
+.how-to-use-p1-mini:first-of-type {
+  margin-top: 6px;
+}
+
+.how-to-use-p1-tag {
+  display: inline-block;
+  font-size: 6px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+
+.how-to-use-p1-tag--orange {
+  color: #fb923c;
+}
+
+.how-to-use-p1-tag--teal {
+  color: #2dd4bf;
+}
+
+.how-to-use-p1-mini--teal {
+  border-color: rgba(45, 212, 191, 0.2);
+  margin-bottom: 0;
+}
+
+.how-to-use-p1-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.how-to-use-p1-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 5px;
+  font-weight: 500;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.2;
+}
+
+.how-to-use-p1-chip--done {
+  border-color: #fb923c;
+  color: #fb923c;
+}
+
+.how-to-use-p1-chip--idle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* 카드2 목표 */
+.how-to-use-p2-head {
+  padding: 8px 10px;
+}
+
+.how-to-use-p2-goal {
+  font-family: 'Plus Jakarta Sans', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 800;
+  font-size: 9px;
+  font-stretch: normal;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.how-to-use-p2-goal-w {
+  color: #fff;
+}
+
+.how-to-use-p2-goal-n {
+  color: #fb923c;
+}
+
+.how-to-use-p2-bar {
+  margin-top: 8px;
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.how-to-use-p2-bar-fill {
+  height: 100%;
+  width: 33%;
+  background: #fb923c;
+}
+
+.how-to-use-p2-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(2, 28px);
+  gap: 4px 3px;
+  padding: 0 8px 8px;
+  align-content: start;
+  margin-top: 6px;
+}
+
+.how-to-use-p2-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.how-to-use-p2-bar-col {
+  width: 100%;
+  height: 28px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.how-to-use-p2-bar-col--1 {
+  background: #fb923c;
+  opacity: 1;
+}
+
+.how-to-use-p2-bar-col--2 {
+  background: #fb923c;
+  opacity: 0.8;
+}
+
+.how-to-use-p2-bar-col--3 {
+  background: #fb923c;
+  opacity: 0.6;
+}
+
+.how-to-use-p2-bar-col--4 {
+  background: #fb923c;
+  opacity: 0.3;
+}
+
+.how-to-use-p2-mo {
+  font-family: 'DM Mono', monospace;
+  font-size: 5px;
+  color: rgba(255, 255, 255, 0.25);
+  line-height: 1;
+}
+
+/* 카드3 갤러리 */
+.how-to-use-p3-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.2);
+  padding: 8px 10px 6px;
+  letter-spacing: 0.04em;
+}
+
+.how-to-use-p3-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 8px 8px;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+.how-to-use-p3-bundle {
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.how-to-use-p3-final {
+  position: relative;
+  height: 55px;
+  box-sizing: border-box;
+}
+
+.how-to-use-p3-final--a {
+  background: linear-gradient(135deg, #3d2a4a 0%, #1e1a2e 100%);
+}
+
+.how-to-use-p3-final--b {
+  background: linear-gradient(135deg, #1a3d3a 0%, #152828 100%);
+}
+
+.how-to-use-p3-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 5px;
+  font-weight: 500;
+  color: #17161a;
+  background: #fb923c;
+  padding: 2px 4px;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+.how-to-use-p3-process {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 5px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.how-to-use-p3-process-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 5px;
+  color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.how-to-use-p3-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.how-to-use-p3-thumb--1 {
+  background: linear-gradient(145deg, #6b5a7a, #3d3548);
+}
+
+.how-to-use-p3-thumb--2 {
+  background: linear-gradient(145deg, #5a7a72, #354840);
+}
+
+.how-to-use-p3-more {
+  font-family: 'DM Mono', monospace;
+  font-size: 5px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 1px;
+}
+
+/* 카드 공통 타이포 — Syne 숫자·한글 가로 과대 → Plus Jakarta 800 */
+.how-to-use-title {
+  font-family: 'Plus Jakarta Sans', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  font-stretch: normal;
+  color: #fff;
+  text-align: center;
+  line-height: 1.35;
+  margin-top: 18px;
+  white-space: pre-line;
+  letter-spacing: -0.02em;
+}
+
+.how-to-use-step-body .how-to-use-title {
+  margin-top: 14px;
+}
+
+.how-to-use-desc {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(45, 212, 191, 0.78);
+  text-align: center;
+  line-height: 1.65;
+  margin-top: 12px;
+  white-space: pre-line;
+}
+
+.how-to-use-nav {
+  margin-top: auto;
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+.how-to-use-nav--single {
+  gap: 0;
+}
+
+.how-to-use-nav--single .how-to-use-nav-btn--next {
+  flex: 1;
+  max-width: 100%;
+}
+
+.how-to-use-nav-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 10px;
+  border-radius: 50px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.how-to-use-nav-btn--prev {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.how-to-use-nav-btn--prev:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.how-to-use-nav-btn--next {
+  border: none;
+  background: #fb923c;
+  color: #17161a;
+}
+
+.how-to-use-nav-btn--next:active {
+  filter: brightness(1.05);
+}
+
+/* 카드4 시작 */
+.how-to-use-card--final {
+  flex: 1;
+  justify-content: space-between;
+  padding-bottom: 24px;
+}
+
+.how-to-use-final-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.how-to-use-logo {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+}
+
+.how-to-use-logo-path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 30;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.how-to-use-final-title {
+  font-family: 'Plus Jakarta Sans', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  font-stretch: normal;
+  color: #fff;
+  text-align: center;
+  margin-top: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.how-to-use-final-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(45, 212, 191, 0.72);
+  letter-spacing: 0.18em;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* 하단 도트 */
+.how-to-use-dots {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  padding-top: 8px;
+}
+
+.how-to-use-dot {
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.how-to-use-dot--active {
+  width: 18px;
+  height: 6px;
+  border-radius: 3px;
+  background: #fb923c;
+}
+
+.how-to-use-dot--idle {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}

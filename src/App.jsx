@@ -9,6 +9,7 @@ import MainTracker from './MainTracker.jsx'
 import ReferenceFolderScreen from './ReferenceFolderScreen.jsx'
 import SettingScreen from './SettingScreen.jsx'
 import OnboardingScreen from './OnboardingScreen.jsx'
+import HowToUseScreen, { readHowToUseTutorialDone } from './HowToUseScreen.jsx'
 import { createDefaultTrackerCards } from './trackerCardsDefaults.js'
 import {
   FEEDBACK_CARDS_LS,
@@ -37,6 +38,13 @@ const LEGACY_GOAL_WELCOME_DONE_KEY = 'worthwith_goal_1y_welcome_done'
  * `worthwith_goal_1y_welcome_done_v2`가 남아 있으면 팝업이 안 뜰 수 있음 → 설정 전체 초기화 또는 해당 키 삭제.
  */
 const GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD = true
+
+/**
+ * 테스트: `true`면 새로고침·재실행마다 1년 목표 온보딩 직후 How to use가 항상 열림(LS 무시).
+ * 완료·건너뛰기 시 `withworth_tutorial`을 저장하지 않아 다음에도 다시 뜸.
+ * 배포 전 `false`로 두면 `withworth_tutorial`로 1회 완료 후 생략.
+ */
+const HOW_TO_USE_TEST_ALWAYS_ON_RELOAD = true
 
 const LEGACY_GOAL_STRIP_KEYS = [
   'worthwith_goal_1y_main_strip_v2',
@@ -291,10 +299,10 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 function App() {
   const { t } = useLang()
   const [screen, setScreen] = useState(
-    /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference'} */ ('splash'),
+    /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference' | 'howToUse'} */ ('splash'),
   )
   const { showInterstitialAfterGallerySend, maybeShowInterstitialAfterBottomNavMove } = useAdMob({
-    adsEnabled: screen !== 'splash',
+    adsEnabled: screen !== 'splash' && screen !== 'howToUse',
   })
   /** 트래커 탭(재)진입마다 증가 → 상단 진행 바·% 애니 재생 */
   const [trackerBarReplayKey, setTrackerBarReplayKey] = useState(0)
@@ -469,6 +477,28 @@ function App() {
     setGoalWelcomeVisible(false)
   }, [])
 
+  const completeHowToUse = useCallback(() => {
+    if (!HOW_TO_USE_TEST_ALWAYS_ON_RELOAD) {
+      try {
+        window.localStorage.setItem('withworth_tutorial', 'true')
+      } catch {
+        /* ignore */
+      }
+    }
+    setScreen('main')
+  }, [])
+
+  const goToHowToUseAfterOnboarding = useCallback(() => {
+    if (HOW_TO_USE_TEST_ALWAYS_ON_RELOAD || !readHowToUseTutorialDone()) {
+      setScreen('howToUse')
+    }
+  }, [])
+
+  const dismissGoalWelcomeAndMaybeHowToUse = useCallback(() => {
+    dismissGoalWelcome()
+    goToHowToUseAfterOnboarding()
+  }, [dismissGoalWelcome, goToHowToUseAfterOnboarding])
+
   /** 확정: 입력한 1년 목표 유지·카드 접음(비었으면 예시 단계) — 설정에서 바꾸기 전까지 그대로 */
   const confirmGoal1yTip = useCallback(() => {
     const empty = !(goalTexts['1y'] ?? '').trim()
@@ -508,6 +538,11 @@ function App() {
       /* ignore */
     }
     clearLegacyGoalStripKeys()
+    try {
+      window.localStorage.removeItem('withworth_tutorial')
+    } catch {
+      /* ignore */
+    }
     if (!GOAL_WELCOME_TEST_ALWAYS_ON_RELOAD) {
       try {
         window.localStorage.removeItem(GOAL_1Y_WELCOME_DONE_KEY)
@@ -626,7 +661,9 @@ function App() {
       ) : (
         <div className="device-frame">
           <div className="device-shell">
-        {screen === 'goal' ? (
+        {screen === 'howToUse' ? (
+          <HowToUseScreen onComplete={completeHowToUse} />
+        ) : screen === 'goal' ? (
           <GoalScreen
             onTabChange={handleAppNav}
             features={appFeatures}
@@ -697,15 +734,17 @@ function App() {
           {screen === 'main' && goalWelcomeVisible ? (
             <OnboardingScreen
               initialText={goalTexts['1y'] ?? ''}
-              onDismiss={dismissGoalWelcome}
+              onDismiss={dismissGoalWelcomeAndMaybeHowToUse}
               onFinishWithMonthly={(text, months) => {
                 setGoalTexts((prev) => ({ ...prev, '1y': text }))
                 setMonthlyGoals(months)
                 dismissGoalWelcome()
+                goToHowToUseAfterOnboarding()
               }}
               onFinishGoalOnly={(text) => {
                 setGoalTexts((prev) => ({ ...prev, '1y': text }))
                 dismissGoalWelcome()
+                goToHowToUseAfterOnboarding()
               }}
             />
           ) : null}
