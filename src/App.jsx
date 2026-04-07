@@ -18,6 +18,7 @@ import {
   loadTrackerCardsFromStorage,
   MONTHLY_GOALS_LS,
   TRACKER_CARDS_LS,
+  TRACKER_STAGE_DONE_LS,
   TRACKER_CARRY_YM_LS,
 } from './trackerPersistence.js'
 import './App.css'
@@ -531,6 +532,7 @@ function App() {
     setFeedbackCards([])
     try {
       window.localStorage.removeItem(TRACKER_CARDS_LS)
+      window.localStorage.removeItem(TRACKER_STAGE_DONE_LS)
       window.localStorage.removeItem(TRACKER_CARRY_YM_LS)
       window.localStorage.removeItem(MONTHLY_GOALS_LS)
       window.localStorage.removeItem(FEEDBACK_CARDS_LS)

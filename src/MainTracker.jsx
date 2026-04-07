@@ -5,7 +5,13 @@ import { applyGoalDisplayBreaks, splitGoalHeaderParagraphs } from './goalConfig.
 import BrandWordmark from './BrandWordmark'
 import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
 import PlusIcon from './PlusIcon'
-import { readCarryProcessedYm, writeCarryProcessedYm } from './trackerPersistence.js'
+import {
+  cardIdFromStageDoneKey,
+  loadStageDoneFromStorage,
+  readCarryProcessedYm,
+  saveStageDoneToStorage,
+  writeCarryProcessedYm,
+} from './trackerPersistence.js'
 import { prevYm, ymFromDate } from './trackerMonth.js'
 import './MainTracker.css'
 
@@ -145,6 +151,17 @@ function computeYearOverallPercent(cards, stageDone, stages) {
     sum += cardEffectiveProgressPercent(c, stageDone, stages)
   }
   return Math.round(sum / yearCards.length)
+}
+
+/** @param {Record<string, boolean>} a @param {Record<string, boolean>} b */
+function stageDoneMapsShallowEqual(a, b) {
+  const ka = Object.keys(a)
+  const kb = Object.keys(b)
+  if (ka.length !== kb.length) return false
+  for (const k of ka) {
+    if (a[k] !== b[k]) return false
+  }
+  return true
 }
 
 function formatYmd(d) {
@@ -561,7 +578,7 @@ function MainTracker({
     () => trackerCards[0]?.id ?? '1',
   )
   const [cardImages, setCardImages] = useState({})
-  const [stageDone, setStageDone] = useState({})
+  const [stageDone, setStageDone] = useState(() => loadStageDoneFromStorage())
   const stageDoneRef = useRef(stageDone)
   stageDoneRef.current = stageDone
   const prevStageFillCountRef = useRef({})
@@ -592,6 +609,41 @@ function MainTracker({
     () => buildTrackerDisplayEntries(trackerCards, monthlyGoals),
     [trackerCards, monthlyGoals],
   )
+
+  useEffect(() => {
+    saveStageDoneToStorage(stageDone)
+  }, [stageDone])
+
+  /** 카드 삭제 시 키 정리 + 저장 이력 없는 카드만 percent/완성으로 복원 */
+  useEffect(() => {
+    const stageIds = STAGES.map((s) => s.id)
+    setStageDone((prev) => {
+      const cardIdSet = new Set(trackerCards.map((c) => String(c.id)))
+      const next = { ...prev }
+      for (const k of Object.keys(next)) {
+        const cid = cardIdFromStageDoneKey(k, stageIds)
+        if (cid == null || !cardIdSet.has(cid)) delete next[k]
+      }
+      for (const card of trackerCards) {
+        const id = String(card.id)
+        const hasAnySaved = STAGES.some((st) => `${id}-${st.id}` in next)
+        if (hasAnySaved) continue
+        if (card.workFinalized) {
+          for (const st of STAGES) next[`${id}-${st.id}`] = true
+        } else {
+          const p = Number(card.percent) || 0
+          const n = Math.min(
+            STAGES.length,
+            Math.max(0, Math.round((p / 100) * STAGES.length)),
+          )
+          for (let i = 0; i < STAGES.length; i++) {
+            next[`${id}-${STAGES[i].id}`] = i < n
+          }
+        }
+      }
+      return stageDoneMapsShallowEqual(prev, next) ? prev : next
+    })
+  }, [trackerCards, STAGES])
 
   useEffect(() => {
     for (const card of trackerCards) {
