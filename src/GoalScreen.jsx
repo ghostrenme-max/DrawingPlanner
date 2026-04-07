@@ -125,10 +125,34 @@ function formatDailyHeaderPeriodLine(week1to4, year, monthIndex0, t) {
   return t.goal.periodToolbarDailyWeek.replace('{label}', label).replace('{range}', range)
 }
 
-/** 1..30일 막대 높이 % (하단에서 상승) */
-function risingHeightPercent(day1to30) {
-  const t = day1to30 / 30
-  return Math.max(5, Math.round(100 * t))
+/**
+ * 일별 1~30 막대 높이(%). 장식용 1→30 계단 제거.
+ * - 보는 달이 미래: 전부 0
+ * - 보는 달이 과거: 매 막대 동일(그 달 트래커 평균 진행률)
+ * - 보는 달이 이번 달: 지난 날·오늘 이후·없는 일(말일 초과)은 0, ‘오늘’ 칸만 진행률
+ *
+ * @param {number} day1to30 1..30
+ * @param {number} gridYear
+ * @param {number} monthIndex0 0..11
+ * @param {Date} now
+ * @param {number} monthProgressPct 그 달 카드 평균 %
+ */
+function dailyRisingBarHeight(day1to30, gridYear, monthIndex0, now, monthProgressPct) {
+  const y = now.getFullYear()
+  const mo = now.getMonth()
+  const todayDom = now.getDate()
+  const lastDom = new Date(gridYear, monthIndex0 + 1, 0).getDate()
+  const p = Math.max(0, Math.min(100, Math.round(Number(monthProgressPct) || 0)))
+
+  if (day1to30 < 1 || day1to30 > 30) return 0
+  if (day1to30 > lastDom) return 0
+
+  if (gridYear > y || (gridYear === y && monthIndex0 > mo)) return 0
+  if (gridYear < y || (gridYear === y && monthIndex0 < mo)) return p
+
+  const todayCol = Math.min(todayDom, lastDom, 30)
+  if (day1to30 !== todayCol) return 0
+  return p
 }
 
 function ymForYearMonth(gridYear, monthIndex0) {
@@ -877,8 +901,16 @@ export default function GoalScreen({
               >
                 {Array.from({ length: 30 }, (_, i) => {
                   const day = i + 1
-                  const h = risingHeightPercent(day)
-                  const delayMs = prefersReducedMotion ? 0 : i * 22
+                  const chartNow = new Date()
+                  const h = dailyRisingBarHeight(
+                    day,
+                    gridYear,
+                    selectedMonthIndex,
+                    chartNow,
+                    monthProgress[selectedMonthIndex] ?? 0,
+                  )
+                  /* 높이 0인 막대는 지연 없음 → 옛날 1~30 계단 애니처럼 보이지 않게 */
+                  const delayMs = prefersReducedMotion || h <= 0 ? 0 : 200
                   return (
                     <div key={day} className="goal-dbar-col">
                       <div className="goal-dbar-track">
