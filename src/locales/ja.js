@@ -94,6 +94,7 @@ export const ja = {
     dmZoomAria: '日別の週（1〜4週目）',
     periodToolbarDailyWeek: '{label} · {range}',
     dailyWeekFutureHint: 'この週はまだ始まっていません',
+    dailyWeekPastHint: 'この週はすでに終わっています',
     dailyWeekOtherWeekToast: '今週以外の週を表示しています。',
     dailyRisingAria: '1日から30日まで高さが上がる棒グラフ',
     dayAxisLabel: '{d}日',

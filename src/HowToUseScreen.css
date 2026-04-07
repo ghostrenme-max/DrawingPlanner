@@ -24,7 +24,7 @@
   background: none;
   cursor: pointer;
   font-family: 'DM Mono', monospace;
-  font-size: 9px;
+  font-size: 9.8px;
   font-weight: 500;
   color: #fb923c;
   letter-spacing: 0.06em;
@@ -436,7 +436,7 @@
 
 .how-to-use-desc {
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: 10.8px;
   font-weight: 400;
   color: rgba(45, 212, 191, 0.78);
   text-align: center;

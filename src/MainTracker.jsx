@@ -111,6 +111,42 @@ function cardProgressPercent(card, stageDone, stages) {
   return Math.round((n / stages.length) * 100)
 }
 
+/**
+ * 새로고침 후 `stageDone`이 비어 있어도 저장된 `card.percent`와 맞춤.
+ * @param {Record<string, unknown>} card
+ * @param {Record<string, boolean>} stageDone
+ * @param {{ id: string }[]} stages
+ */
+function cardEffectiveProgressPercent(card, stageDone, stages) {
+  if (card.workFinalized) return 100
+  const fromStages = cardProgressPercent(card, stageDone, stages)
+  const raw = card.percent
+  const stored =
+    typeof raw === 'number' && Number.isFinite(raw)
+      ? Math.round(Math.min(100, Math.max(0, raw)))
+      : 0
+  return Math.max(fromStages, stored)
+}
+
+/**
+ * 올해(현재 연도) 활동 월이 해당 연도인 카드들의 평균 진행률. 카드 없으면 0.
+ * @param {unknown[]} cards
+ * @param {Record<string, boolean>} stageDone
+ * @param {{ id: string }[]} stages
+ */
+function computeYearOverallPercent(cards, stageDone, stages) {
+  const y = String(new Date().getFullYear())
+  const yearCards = cards.filter(
+    (c) => c && typeof c.activeMonthYm === 'string' && c.activeMonthYm.startsWith(`${y}-`),
+  )
+  if (yearCards.length === 0) return 0
+  let sum = 0
+  for (const c of yearCards) {
+    sum += cardEffectiveProgressPercent(c, stageDone, stages)
+  }
+  return Math.round(sum / yearCards.length)
+}
+
 function formatYmd(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -532,6 +568,9 @@ function MainTracker({
   const [completeBtnGlowOnce, setCompleteBtnGlowOnce] = useState({})
   const [hdrBarActive, setHdrBarActive] = useState(false)
   const [hdrPctDisplay, setHdrPctDisplay] = useState(0)
+  const hdrPctDisplayRef = useRef(0)
+  hdrPctDisplayRef.current = hdrPctDisplay
+  const prevHdrReplayKeyRef = useRef(trackerBarReplayKey)
   const [gallerySentOpen, setGallerySentOpen] = useState(false)
   const [galleryNeedImagesHint, setGalleryNeedImagesHint] = useState(false)
   const [feedbackPreview, setFeedbackPreview] = useState(
@@ -544,7 +583,10 @@ function MainTracker({
   const gallerySentTimerRef = useRef(0)
   const galleryNeedImagesTimerRef = useRef(0)
 
-  const overallPct = 64
+  const overallPct = useMemo(
+    () => computeYearOverallPercent(trackerCards, stageDone, STAGES),
+    [trackerCards, stageDone, STAGES],
+  )
 
   const displayEntries = useMemo(
     () => buildTrackerDisplayEntries(trackerCards, monthlyGoals),
@@ -630,28 +672,39 @@ function MainTracker({
   useEffect(() => {
     if (!hdrBarActive) return
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    const replayBumped = prevHdrReplayKeyRef.current !== trackerBarReplayKey
+    const from = replayBumped ? 0 : hdrPctDisplayRef.current
+    const target = overallPct
+    const duration = replayBumped || from <= 0 ? MT_HEADER_BAR_MS : MT_LIVE_BAR_MS
+
     if (reduced) {
-      setHdrPctDisplay(overallPct)
+      setHdrPctDisplay(target)
+      prevHdrReplayKeyRef.current = trackerBarReplayKey
       return
     }
+
+    if (!replayBumped && from === target) {
+      prevHdrReplayKeyRef.current = trackerBarReplayKey
+      return
+    }
+
     let cancelled = false
-    const target = overallPct
-    const duration = MT_HEADER_BAR_MS
     const t0 = performance.now()
     const easeOut = (x) => 1 - (1 - x) ** 2
     let raf = 0
     const tick = (now) => {
       if (cancelled) return
       const t = Math.min(1, (now - t0) / duration)
-      setHdrPctDisplay(Math.round(easeOut(t) * target))
+      setHdrPctDisplay(Math.round(from + easeOut(t) * (target - from)))
       if (t < 1) raf = requestAnimationFrame(tick)
+      else prevHdrReplayKeyRef.current = trackerBarReplayKey
     }
     raf = requestAnimationFrame(tick)
     return () => {
       cancelled = true
       cancelAnimationFrame(raf)
     }
-  }, [hdrBarActive, overallPct])
+  }, [hdrBarActive, overallPct, trackerBarReplayKey])
 
   useEffect(() => {
     return () => {

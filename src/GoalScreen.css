@@ -787,6 +787,10 @@
   opacity: 0.38;
 }
 
+.goal-daily-week-block--past {
+  opacity: 0.38;
+}
+
 .goal-daily-week-chip {
   display: flex;
   align-items: center;

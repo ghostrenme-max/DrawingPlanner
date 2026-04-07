@@ -94,6 +94,7 @@ export const ko = {
     dmZoomAria: '일별 주차(1~4주차)',
     periodToolbarDailyWeek: '{label} · {range}',
     dailyWeekFutureHint: '아직 이 주차가 시작되지 않았어요',
+    dailyWeekPastHint: '이미 지난 주차예요',
     dailyWeekOtherWeekToast: '이번 주가 아닌 주차를 보고 있어요.',
     dailyRisingAria: '1일부터 30일까지 높이가 올라가는 막대 그래프',
     dayAxisLabel: '{d}일',

@@ -15,8 +15,8 @@ import './GoalScreen.css'
 
 /** 상단 진행률 가로 바 + % 숫자 — 트래커 헤더와 동기 */
 const GOAL_HEADER_BAR_MS = 980
+const GOAL_HEADER_LIVE_MS = 420
 
-const GOAL_PROGRESS_PERCENT = 33
 
 /** 월 막대 % 라벨: 저장 진행률이 이 값 미만이면 비렌더(애니 중엔 채움 overflow로 잘림 해제와 맞춤) */
 const GOAL_MBAR_PCT_SHOW_MIN = 15
@@ -291,14 +291,19 @@ export default function GoalScreen({
   const [dmZoomId, setDmZoomId] = useState(GOAL_DM_ZOOM[0].id)
   const [barsPlay, setBarsPlay] = useState(false)
   const [headerPctDisplay, setHeaderPctDisplay] = useState(0)
+  const headerPctDisplayRef = useRef(0)
+  headerPctDisplayRef.current = headerPctDisplay
+  const headerAnimCtxRef = useRef(/** @type {{ goalScope: string; selectedMonthIndex: number } | null} */ (null))
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => new Date().getMonth())
   const [monthGoalEditing, setMonthGoalEditing] = useState(false)
   const [monthGoalDraft, setMonthGoalDraft] = useState('')
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [taskDotsPlay, setTaskDotsPlay] = useState(false)
   const [startAnim, setStartAnim] = useState(false)
-  /** 일별 하단: 1~4주차 */
-  const [selectedWeekOfMonth, setSelectedWeekOfMonth] = useState(/** @type {1 | 2 | 3 | 4} */ (1))
+  /** 일별 하단: 1~4주차 — 초기값은 오늘 기준 주차 */
+  const [selectedWeekOfMonth, setSelectedWeekOfMonth] = useState(
+    () => weekOfMonthForCalendarDay(new Date().getDate()),
+  )
   /** 일별 탭을 누를 때마다 증가 → 완성 작업 줄 긋기 애니 재생 */
   const [dailyStrikeReplay, setDailyStrikeReplay] = useState(0)
   /** 이번 달에서 ‘오늘 주차’가 아닌 주 탭 시 토스트 (key로 타이머 리셋) */
@@ -319,18 +324,14 @@ export default function GoalScreen({
     setDmZoomId(DAILY_WEEK_DM_ZOOM_IDS[idx])
   }, [goalScope, selectedWeekOfMonth])
 
-  const nowClock = new Date()
-  const dailyMaxSelectableWeek =
-    gridYear === nowClock.getFullYear() && selectedMonthIndex === nowClock.getMonth()
-      ? weekOfMonthForCalendarDay(nowClock.getDate())
-      : /** @type {1 | 2 | 3 | 4} */ (4)
-
+  /** 목표 탭이 ‘이번 달’일 때 선택 주차를 항상 오늘 주차에 맞춤 */
   useEffect(() => {
     if (goalScope !== 'daily') return
-    if (selectedWeekOfMonth > dailyMaxSelectableWeek) {
-      setSelectedWeekOfMonth(dailyMaxSelectableWeek)
-    }
-  }, [goalScope, dailyMaxSelectableWeek, selectedWeekOfMonth])
+    const now = new Date()
+    if (gridYear !== now.getFullYear() || selectedMonthIndex !== now.getMonth()) return
+    const tw = weekOfMonthForCalendarDay(now.getDate())
+    setSelectedWeekOfMonth(tw)
+  }, [goalScope, selectedMonthIndex, gridYear])
 
   const goals12 = useMemo(() => {
     const g = Array.isArray(monthlyGoals) ? [...monthlyGoals] : []
@@ -451,7 +452,9 @@ export default function GoalScreen({
   }, [selectedMonthIndex, barsPlay, prefersReducedMotion, mbarSnap, startAnim])
 
   const headerTargetPct =
-    goalScope === 'monthly' ? monthProgress[selectedMonthIndex] ?? 0 : GOAL_PROGRESS_PERCENT
+    goalScope === 'monthly'
+      ? monthProgress[selectedMonthIndex] ?? 0
+      : averagePercent(cardsForSelectedMonth)
 
   const isMonthlyHeaderCentered =
     goalScope === 'monthly' && (goals12[selectedMonthIndex] ?? '').trim().length > 0
@@ -464,20 +467,32 @@ export default function GoalScreen({
   useEffect(() => {
     if (!barsPlay) return
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    const prev = headerAnimCtxRef.current
+    const ctxChanged =
+      prev == null ||
+      prev.goalScope !== goalScope ||
+      prev.selectedMonthIndex !== selectedMonthIndex
+    headerAnimCtxRef.current = { goalScope, selectedMonthIndex }
+
     if (reduced) {
       setHeaderPctDisplay(headerTargetPct)
       return
     }
-    let cancelled = false
+
+    const from = ctxChanged ? 0 : headerPctDisplayRef.current
     const target = headerTargetPct
-    const duration = GOAL_HEADER_BAR_MS
+    const duration = ctxChanged ? GOAL_HEADER_BAR_MS : GOAL_HEADER_LIVE_MS
+
+    if (!ctxChanged && from === target) return
+
+    let cancelled = false
     const t0 = performance.now()
     const easeOut = (x) => 1 - (1 - x) ** 2
     let raf = 0
     const tick = (now) => {
       if (cancelled) return
       const t = Math.min(1, (now - t0) / duration)
-      setHeaderPctDisplay(Math.round(easeOut(t) * target))
+      setHeaderPctDisplay(Math.round(from + easeOut(t) * (target - from)))
       if (t < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -485,7 +500,7 @@ export default function GoalScreen({
       cancelled = true
       cancelAnimationFrame(raf)
     }
-  }, [barsPlay, headerTargetPct])
+  }, [barsPlay, headerTargetPct, goalScope, selectedMonthIndex])
 
   const selectedMonthGoalText = goals12[selectedMonthIndex] ?? ''
   const showMonthGoalEmpty = !selectedMonthGoalText.trim() && !monthGoalEditing
@@ -580,7 +595,15 @@ export default function GoalScreen({
             <div className="goal-daily-week-stack" role="tablist" aria-label={t.goal.dailyWeekRowAria}>
               {DAILY_WEEK_DAY_RANGES.map((rangeRow, i) => {
                 const w = /** @type {1 | 2 | 3 | 4} */ (i + 1)
-                const lockedFuture = w > dailyMaxSelectableWeek
+                const now = new Date()
+                const isThisCalendarMonth =
+                  gridYear === now.getFullYear() && selectedMonthIndex === now.getMonth()
+                const todayWeek = isThisCalendarMonth
+                  ? weekOfMonthForCalendarDay(now.getDate())
+                  : null
+                const lockedPast = isThisCalendarMonth && todayWeek != null && w < todayWeek
+                const lockedFuture = isThisCalendarMonth && todayWeek != null && w > todayWeek
+                const weekDisabled = lockedPast || lockedFuture
                 const weekLbl = t.goal.dailyWeekLabels[w - 1]
                 const dateRange = formatDailyWeekCalendarRange(
                   gridYear,
@@ -589,12 +612,18 @@ export default function GoalScreen({
                   rangeRow.end,
                 )
                 const tabAria = dateRange ? `${weekLbl}, ${dateRange}` : weekLbl
+                const disableTitle = lockedPast
+                  ? t.goal.dailyWeekPastHint
+                  : lockedFuture
+                    ? t.goal.dailyWeekFutureHint
+                    : undefined
                 return (
                   <div
                     key={w}
                     className={[
                       'goal-daily-week-block',
                       lockedFuture ? 'goal-daily-week-block--future' : '',
+                      lockedPast ? 'goal-daily-week-block--past' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -602,11 +631,11 @@ export default function GoalScreen({
                     <button
                       type="button"
                       role="tab"
-                      tabIndex={lockedFuture ? -1 : 0}
-                      aria-disabled={lockedFuture}
+                      tabIndex={weekDisabled ? -1 : 0}
+                      aria-disabled={weekDisabled}
                       aria-selected={selectedWeekOfMonth === w}
                       aria-label={tabAria}
-                      title={lockedFuture ? t.goal.dailyWeekFutureHint : undefined}
+                      title={disableTitle}
                       className={[
                         'goal-daily-week-chip',
                         selectedWeekOfMonth === w ? 'goal-daily-week-chip--active' : '',
@@ -614,26 +643,14 @@ export default function GoalScreen({
                         .filter(Boolean)
                         .join(' ')}
                       onClick={() => {
-                        if (lockedFuture) {
+                        if (weekDisabled) {
                           setWeekNavToast((prev) => ({
                             key: prev.key + 1,
-                            msg: t.goal.dailyWeekFutureHint,
+                            msg: lockedPast ? t.goal.dailyWeekPastHint : t.goal.dailyWeekFutureHint,
                           }))
                           return
                         }
                         setSelectedWeekOfMonth(w)
-                        const now = new Date()
-                        const isThisCalendarMonth =
-                          gridYear === now.getFullYear() && selectedMonthIndex === now.getMonth()
-                        if (isThisCalendarMonth) {
-                          const todayWeek = weekOfMonthForCalendarDay(now.getDate())
-                          if (w !== todayWeek) {
-                            setWeekNavToast((prev) => ({
-                              key: prev.key + 1,
-                              msg: t.goal.dailyWeekOtherWeekToast,
-                            }))
-                          }
-                        }
                       }}
                     >
                       <span className="goal-daily-week-chip-week">{weekLbl}</span>

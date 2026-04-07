@@ -5,6 +5,9 @@ import { AdMob, BannerAdPosition, BannerAdSize } from '@capacitor-community/admo
 const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111'
 const TEST_INTERSTITIAL_ID = 'ca-app-pub-3940256099942544/1033173712'
 
+/** 베타 APK: `.env` / 빌드 시 `VITE_DISABLE_INTERSTITIALS=true` → 전면만 끔(배너 유지) */
+const INTERSTITIALS_DISABLED = import.meta.env.VITE_DISABLE_INTERSTITIALS === 'true'
+
 /** 하단 탭 전환: 매번 1/6 확률, 6번 연속 미적중 시 강제 1회 */
 const NAV_INTERSTITIAL_WINDOW = 6
 const NAV_INTERSTITIAL_CHANCE = 1 / 6
@@ -97,6 +100,7 @@ export function useAdMob(opts = {}) {
   }, [adsEnabled])
 
   const showInterstitial = useCallback(async () => {
+    if (INTERSTITIALS_DISABLED) return
     if (!Capacitor.isNativePlatform()) return
     try {
       await initialize()
@@ -120,6 +124,7 @@ export function useAdMob(opts = {}) {
    * 독립 시행 1/6 또는 누적 6회 미적중 시 전면 (그 안에 반드시 1번)
    */
   const maybeShowInterstitialAfterBottomNavMove = useCallback(() => {
+    if (INTERSTITIALS_DISABLED) return
     if (!Capacitor.isNativePlatform()) return
     navMovesSinceLastInterstitialRef.current += 1
     const m = navMovesSinceLastInterstitialRef.current

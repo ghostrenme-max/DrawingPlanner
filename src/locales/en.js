@@ -94,6 +94,7 @@ export const en = {
     dmZoomAria: 'Daily weeks (1–4)',
     periodToolbarDailyWeek: '{label} · {range}',
     dailyWeekFutureHint: 'This week has not started yet',
+    dailyWeekPastHint: 'This week has already passed',
     dailyWeekOtherWeekToast: "You're viewing a week other than this calendar week.",
     dailyRisingAria: 'Bar chart rising from day 1 through day 30',
     dayAxisLabel: '{d}',
