@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
-import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
+import {
+  NavIconChase,
+  NavIconGallery,
+  NavIconGoal,
+  NavIconSettings,
+  NavIconTracker,
+} from './bottomNavIcons.jsx'
 import './ReferenceFolderScreen.css'
 
 /** 저장·필터용 안정 키 (표시는 `t.gallery.tags[key]`) */
@@ -44,7 +50,7 @@ function formatSavedAt(iso) {
  *         ) => Array<{ id: string; url: string; tag: string; memo: string; savedAt: string }>),
  *   ) => void
  *   onBack: () => void
- *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
+ *   onTabChange?: (tab: 'tracker' | 'chase' | 'goal' | 'gallery' | 'settings') => void
  *   features?: import('./appFeatures.js').AppFeatures
  * }} props
  */
@@ -235,6 +241,12 @@ export default function ReferenceFolderScreen({
             <NavIconTracker />
           </span>
           {t.nav.tracker}
+        </button>
+        <button type="button" className="ref-folder-nav-item" onClick={() => onTabChange?.('chase')}>
+          <span className="ref-folder-nav-icon" aria-hidden>
+            <NavIconChase />
+          </span>
+          {t.nav.chase}
         </button>
         {features.goalScreen ? (
           <button type="button" className="ref-folder-nav-item" onClick={() => onTabChange?.('goal')}>

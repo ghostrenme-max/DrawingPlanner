@@ -15,6 +15,18 @@ export function NavIconTracker({ className = '' }) {
   )
 }
 
+/** 따라잡기 — 과녁 */
+export function NavIconChase({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width={24} height={24} aria-hidden>
+      <circle cx="12" cy="12" r="9" {...s} />
+      <circle cx="12" cy="12" r="5.5" {...s} />
+      <path d="M12 4v2.5M12 17.5V20M4 12h2.5M17.5 12H20" {...s} />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 /** 목표 — 과녁 */
 export function NavIconGoal({ className = '' }) {
   return (

@@ -3,6 +3,7 @@ export const ja = {
   tagline: 'ともに描いて、一筆ずつ',
   nav: {
     tracker: 'トラッカー',
+    chase: 'キャッチアップ',
     goal: '目標',
     gallery: 'ギャラリー',
     setting: '設定',
@@ -28,6 +29,11 @@ export const ja = {
     imageViewerAria: '画像を全画面表示',
     feedbackInputAria: 'フィードバック入力',
     deleteImageTestAria: '画像を削除（テスト）',
+  },
+  chase: {
+    refUploadTooltipBar: '先に参考画像をアップロードしてください。',
+    workUploadTooltipBar: '先に作業画像をアップロードしてください。',
+    removeCardAria: 'このキャッチアップを削除',
   },
   tracker: {
     today: 'TODAY',

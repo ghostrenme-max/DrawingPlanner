@@ -3,6 +3,7 @@ export const en = {
   tagline: 'Sketch to Finish, Never give up',
   nav: {
     tracker: 'Tracker',
+    chase: 'Catch up',
     goal: 'Goals',
     gallery: 'Gallery',
     setting: 'Settings',
@@ -28,6 +29,11 @@ export const en = {
     imageViewerAria: 'Full image view',
     feedbackInputAria: 'Feedback input',
     deleteImageTestAria: 'Delete image (test)',
+  },
+  chase: {
+    refUploadTooltipBar: 'Please upload a reference image first.',
+    workUploadTooltipBar: 'Please upload your work image first.',
+    removeCardAria: 'Remove this catch-up',
   },
   tracker: {
     today: 'TODAY',

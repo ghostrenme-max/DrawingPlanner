@@ -10,7 +10,13 @@ import {
 } from './goalConfig.js'
 import AppToast from './components/AppToast.jsx'
 import BrandWordmark from './BrandWordmark'
-import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
+import {
+  NavIconChase,
+  NavIconGallery,
+  NavIconGoal,
+  NavIconSettings,
+  NavIconTracker,
+} from './bottomNavIcons.jsx'
 import './GoalScreen.css'
 
 /** 상단 진행률 가로 바 + % 숫자 — 트래커 헤더와 동기 */
@@ -292,7 +298,7 @@ function GoalTrackerWorkList({ cards, t }) {
 
 /**
  * @param {{
- *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
+ *   onTabChange?: (tab: 'tracker' | 'chase' | 'goal' | 'gallery' | 'settings') => void
  *   goalTexts?: Record<string, string>
  *   monthlyGoals?: string[]
  *   onMonthlyGoalsChange?: (updater: (prev: string[]) => string[]) => void
@@ -959,6 +965,12 @@ export default function GoalScreen({
             <NavIconTracker />
           </span>
           {t.nav.tracker}
+        </button>
+        <button type="button" className="goal-nav-item" onClick={() => onTabChange?.('chase')}>
+          <span className="goal-nav-icon" aria-hidden>
+            <NavIconChase />
+          </span>
+          {t.nav.chase}
         </button>
         <button type="button" className="goal-nav-item goal-nav-item--active">
           <span className="goal-nav-icon" aria-hidden>

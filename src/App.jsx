@@ -3,6 +3,7 @@ import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import { createEmptyGoalTexts } from './goalConfig.js'
 import { applyThemeToDocument, DEFAULT_THEME_INDEX } from './appTheme.js'
+import ChaseScreen from './ChaseScreen.jsx'
 import GalleryScreen from './GalleryScreen.jsx'
 import GoalScreen from './GoalScreen.jsx'
 import MainTracker from './MainTracker.jsx'
@@ -23,6 +24,7 @@ import {
 } from './trackerPersistence.js'
 import './App.css'
 import { useAdMob } from './hooks/useAdMob.js'
+import { useAppStore } from './stores/appStore.js'
 
 /**
  * 트래커 1년 목표 UI: `tip` = 카드+입력+확정·닫기. 확정 시 유지·접기(비면 sample·있으면 hidden).
@@ -300,7 +302,7 @@ function AnimatedSplashLogo({ timing, onMeasured }) {
 function App() {
   const { t } = useLang()
   const [screen, setScreen] = useState(
-    /** @type {'splash' | 'main' | 'goal' | 'gallery' | 'setting' | 'reference' | 'howToUse'} */ ('splash'),
+    /** @type {'splash' | 'main' | 'chase' | 'goal' | 'gallery' | 'setting' | 'reference' | 'howToUse'} */ ('splash'),
   )
   const { showInterstitialAfterGallerySend, maybeShowInterstitialAfterBottomNavMove } = useAdMob({
     adsEnabled: screen !== 'splash' && screen !== 'howToUse',
@@ -355,11 +357,12 @@ function App() {
   }, [themeIndex])
 
   const handleAppNav = useCallback(
-    /** @param {'tracker' | 'goal' | 'gallery' | 'settings'} tab */
+    /** @param {'tracker' | 'chase' | 'goal' | 'gallery' | 'settings'} tab */
     (tab) => {
       /** @type {Record<string, typeof screen>} */
       const tabToScreen = {
         tracker: 'main',
+        chase: 'chase',
         goal: 'goal',
         gallery: 'gallery',
         settings: 'setting',
@@ -371,6 +374,8 @@ function App() {
       if (tab === 'tracker') {
         setScreen('main')
         setTrackerBarReplayKey((k) => k + 1)
+      } else if (tab === 'chase') {
+        setScreen('chase')
       } else if (tab === 'goal') {
         setScreen('goal')
       } else if (tab === 'gallery') {
@@ -557,6 +562,11 @@ function App() {
     setGoal1yMainStrip('tip')
     hadGoal1yTextRef.current = false
     setGalleryPinnedKeys([])
+    try {
+      useAppStore.getState().resetChaseData()
+    } catch {
+      /* ignore */
+    }
   }, [t])
 
   /** 갤러리 테스트용: 이미지 한 장 삭제(blob URL 정리 포함) */
@@ -674,6 +684,8 @@ function App() {
             onMonthlyGoalsChange={setMonthlyGoals}
             trackerCards={trackerCards}
           />
+        ) : screen === 'chase' ? (
+          <ChaseScreen onTabChange={handleAppNav} features={appFeatures} />
         ) : screen === 'reference' ? (
           <ReferenceFolderScreen
             referenceImages={referenceImages}

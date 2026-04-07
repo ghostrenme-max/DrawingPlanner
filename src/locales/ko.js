@@ -3,6 +3,7 @@ export const ko = {
   tagline: '포기하지 않고, 스케치에서 완성까지',
   nav: {
     tracker: '트래커',
+    chase: '따라잡기',
     goal: '목표',
     gallery: '갤러리',
     setting: '설정',
@@ -28,6 +29,11 @@ export const ko = {
     imageViewerAria: '이미지 전체 보기',
     feedbackInputAria: '피드백 입력',
     deleteImageTestAria: '이미지 삭제(테스트)',
+  },
+  chase: {
+    refUploadTooltipBar: '레퍼런스 이미지를 먼저 업로드해 주세요.',
+    workUploadTooltipBar: '내 작업 이미지를 먼저 업로드해 주세요.',
+    removeCardAria: '이 따라잡기 삭제',
   },
   tracker: {
     today: 'TODAY',

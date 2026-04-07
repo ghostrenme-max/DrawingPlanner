@@ -2,7 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import BrandWordmark from './BrandWordmark'
-import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
+import {
+  NavIconChase,
+  NavIconGallery,
+  NavIconGoal,
+  NavIconSettings,
+  NavIconTracker,
+} from './bottomNavIcons.jsx'
 import './GalleryScreen.css'
 import { Capacitor } from '@capacitor/core'
 import { hideBanner, shouldShowBannerOnThisTabVisit, showBanner } from './hooks/useAdMob.js'
@@ -328,7 +334,7 @@ function buildImagesFromProcessOrder(finalIndex, fullImages, reorderedProcess) {
  * @param {{
  *   galleryItems: unknown[]
  *   onGalleryItemsChange: (next: unknown[]) => void
- *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
+ *   onTabChange?: (tab: 'tracker' | 'chase' | 'goal' | 'gallery' | 'settings') => void
  *   onRemoveGalleryImage?: (itemId: string, imageIndex: number) => void
  *   features?: import('./appFeatures.js').AppFeatures
  *   galleryPinnedKeys?: string[]
@@ -1249,6 +1255,12 @@ export default function GalleryScreen({
             <NavIconTracker />
           </span>
           {t.nav.tracker}
+        </button>
+        <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('chase')}>
+          <span className="gallery-nav-icon" aria-hidden>
+            <NavIconChase />
+          </span>
+          {t.nav.chase}
         </button>
         {features.goalScreen ? (
           <button type="button" className="gallery-nav-item" onClick={() => onTabChange?.('goal')}>

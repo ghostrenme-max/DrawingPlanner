@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useLang } from './contexts/LanguageContext.js'
 import { APP_THEME_PRESETS } from './appTheme.js'
-import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
+import {
+  NavIconChase,
+  NavIconGallery,
+  NavIconGoal,
+  NavIconSettings,
+  NavIconTracker,
+} from './bottomNavIcons.jsx'
 import { createEmptyGoalTexts } from './goalConfig.js'
 import BrandWordmark from './BrandWordmark.jsx'
 import SnsShareHubSection from './components/SnsShareHubSection.jsx'
@@ -15,7 +21,7 @@ import './SettingScreen.css'
 
 /**
  * @param {{
- *   onTabChange?: (tab: 'tracker' | 'goal' | 'gallery' | 'settings') => void
+ *   onTabChange?: (tab: 'tracker' | 'chase' | 'goal' | 'gallery' | 'settings') => void
  *   features: import('./appFeatures.js').AppFeatures
  *   onFeaturesChange: (updater: (prev: import('./appFeatures.js').AppFeatures) => import('./appFeatures.js').AppFeatures) => void
  *   onResetApp: () => void
@@ -435,6 +441,12 @@ export default function SettingScreen({
             <NavIconTracker />
           </span>
           {t.nav.tracker}
+        </button>
+        <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('chase')}>
+          <span className="setting-nav-icon" aria-hidden>
+            <NavIconChase />
+          </span>
+          {t.nav.chase}
         </button>
         {features.goalScreen ? (
           <button type="button" className="setting-nav-item" onClick={() => onTabChange?.('goal')}>

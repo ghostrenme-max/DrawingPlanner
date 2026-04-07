@@ -3,7 +3,13 @@ import { useLang } from './contexts/LanguageContext.js'
 import { DEFAULT_APP_FEATURES } from './appFeatures.js'
 import { applyGoalDisplayBreaks, splitGoalHeaderParagraphs } from './goalConfig.js'
 import BrandWordmark from './BrandWordmark'
-import { NavIconGallery, NavIconGoal, NavIconSettings, NavIconTracker } from './bottomNavIcons.jsx'
+import {
+  NavIconChase,
+  NavIconGallery,
+  NavIconGoal,
+  NavIconSettings,
+  NavIconTracker,
+} from './bottomNavIcons.jsx'
 import PlusIcon from './PlusIcon'
 import {
   cardIdFromStageDoneKey,
@@ -1317,6 +1323,12 @@ function MainTracker({
             <NavIconTracker />
           </span>
           {t.nav.tracker}
+        </button>
+        <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('chase')}>
+          <span className="mt-nav-icon" aria-hidden>
+            <NavIconChase />
+          </span>
+          {t.nav.chase}
         </button>
         {features.goalScreen ? (
           <button type="button" className="mt-nav-item" onClick={() => onTabChange?.('goal')}>
